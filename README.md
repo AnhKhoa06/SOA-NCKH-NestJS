@@ -2,8 +2,6 @@
 
 Đồ án môn **Kiến trúc hướng dịch vụ (SOA)** – Nhóm 5 (lớp K46D), giảng viên hướng dẫn: Võ Thị Mỹ.
 
-**Đổi tên đề tài (11/2026):** đề tài chính thức của nhóm là *"Sử dụng kiến trúc SOA để phân tích, xây dựng và quản lý hệ thống quản lý các đề tài nghiên cứu khoa học của trường Đại học"* — không còn là "quản lý đồ án tốt nghiệp" như bản giữa kỳ. Hai bài toán khá gần nhau (đề tài, đăng ký, duyệt, hồ sơ) nên toàn bộ khung kiến trúc SOA và phần lớn code hiện có được giữ lại và mở rộng, không viết lại từ đầu.
-
 Hệ thống (tên gọi **SOA-NCKH**) quản lý toàn bộ quy trình nghiên cứu khoa học của Khoa: học vụ (khoa, ngành, sinh viên, giảng viên), đề tài, đăng ký — duyệt đăng ký, thực hiện và nghiệm thu đề tài, thông báo, thống kê — báo cáo, và một dịch vụ **AI hỗ trợ** (kiểm tra đề tài trùng lặp bằng RAG, gợi ý thành viên hội đồng). Backend NestJS + MySQL, frontend React (Vite), kiến trúc SOA: mỗi dịch vụ một cổng và một cơ sở dữ liệu riêng, giao tiếp qua HTTP/REST, đi qua một API Gateway.
 
 Tài liệu đặc tả yêu cầu phần mềm đầy đủ (SRS, chuẩn ISO/IEC/IEEE 29148): yêu cầu chức năng FR-01 → FR-33, phi chức năng NFR-01 → NFR-16, mô hình UML, phân tích kiến trúc SOA, mô hình dữ liệu, kiểm thử và ma trận truy vết — nằm trong tài liệu SRS của nhóm (`SRS_SOA-NCKH.docx`). Mã yêu cầu trong README này lấy theo tài liệu đó.
