@@ -11,7 +11,7 @@ Tài liệu đặc tả yêu cầu phần mềm đầy đủ (SRS, chuẩn ISO/I
 Tài liệu SRS đặc tả hệ thống **đích** gồm 8 dịch vụ; bảng dưới đây cho biết phần nào đã chạy được, tránh nhầm đặc tả với tiến độ thực tế.
 
 | Hạng mục                                                                                           | Trạng thái                                                           |
-| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | --- |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Tách monorepo NestJS (`apps/` + `libs/`)                                                           | Xong                                                                 |
 | Academic Service — hiện là Student service, cổng 3001, CSDL `qldatn_sinhvien`                      | Xong (mức cơ bản)                                                    |
 | Topic Service, cổng 3002, CSDL `qldatn_detai`                                                      | Xong (mức cơ bản)                                                    |
@@ -28,7 +28,7 @@ Tài liệu SRS đặc tả hệ thống **đích** gồm 8 dịch vụ; bảng 
 | **AI Service (cổng 3007):** kiểm tra đề tài trùng bằng RAG, gợi ý thành viên hội đồng              | Chưa làm                                                             |
 | Hàng đợi thông điệp, sổ đăng ký dịch vụ                                                            | Chưa làm                                                             |
 | Health check, retry, circuit breaker, Docker                                                       | Chưa làm                                                             |
-| Màn hình frontend cho các chức năng mới, Swagger/OpenAPI                                           | Chưa làm                                                             |     |
+| Màn hình frontend cho các chức năng mới, Swagger/OpenAPI                                           | Chưa làm                                                             |
 
 ## Kiến trúc đích (theo SRS) — 8 dịch vụ
 
