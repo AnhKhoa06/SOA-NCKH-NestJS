@@ -27,7 +27,7 @@ import { auth, logout } from "./api";
 const MENU = [
   {
     key: "project",
-    title: "ĐỒ ÁN TỐT NGHIỆP",
+    title: "NGHIÊN CỨU KHOA HỌC",
     items: [
       { to: "/sinh-vien", label: "Sinh viên", icon: Users },
       { to: "/de-tai", label: "Đề tài", icon: BookOpen },
