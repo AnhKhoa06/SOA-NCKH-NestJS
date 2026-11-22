@@ -1,12 +1,4 @@
-import {
-  UserRound,
-  Users,
-  BookOpen,
-  ClipboardList,
-  LogOut,
-  ChevronLeft,
-  ChevronDown,
-} from "lucide-react";
+import { UserRound, LogOut, ChevronLeft, ChevronDown } from "lucide-react";
 import logoImg from "./assets/logo.png";
 import { useState, useEffect } from "react";
 import {
@@ -17,46 +9,40 @@ import {
   Navigate,
 } from "react-router-dom";
 import Login from "./pages/Login";
-import SinhVien from "./pages/SinhVien";
-import DeTai from "./pages/DeTai";
-import DangKy from "./pages/DangKy";
 import "./App.css";
 import { ToastProvider } from "./components/Toast";
+import Topbar from "./components/Topbar";
 import { auth, logout } from "./api";
+import { HOME, MENU_BY_ROLE, ROLES, ROLE_LABEL } from "./config/menu";
+import { ROUTES } from "./config/routes";
 
-const MENU = [
-  {
-    key: "project",
-    title: "NGHIÊN CỨU KHOA HỌC",
-    items: [
-      { to: "/sinh-vien", label: "Sinh viên", icon: Users },
-      { to: "/de-tai", label: "Đề tài", icon: BookOpen },
-      { to: "/dang-ky", label: "Đăng ký", icon: ClipboardList },
-    ],
-  },
-];
+// Phiên cũ (trước khi có phân quyền) lưu role "admin": coi như chưa đăng nhập
+function readSession() {
+  const user = auth.getUser();
+  const ok = !!auth.getRefresh() && !!user && ROLES.includes(user.role);
+  if (!ok && auth.getRefresh()) auth.clear();
+  return ok ? user : null;
+}
 
 function App() {
-  // Còn refresh token thì coi như đã đăng nhập (api.js tự làm mới access token)
-  const [isLoggedIn, setIsLoggedIn] = useState(() => !!auth.getRefresh());
+  const [user, setUser] = useState(readSession);
+  const isLoggedIn = !!user;
+  const role = user?.role;
 
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem("sidebar-collapsed") === "true",
   );
-
-  const [openGroups, setOpenGroups] = useState({ project: true });
-  const toggleGroup = (key) => setOpenGroups((g) => ({ ...g, [key]: !g[key] }));
-
-  const user = auth.getUser() || {};
+  const [closedGroups, setClosedGroups] = useState({});
+  const toggleGroup = (key) =>
+    setClosedGroups((g) => ({ ...g, [key]: !g[key] }));
 
   // api.js phát sự kiện này khi phiên hết hạn hẳn
   useEffect(() => {
-    const onForceLogout = () => setIsLoggedIn(false);
+    const onForceLogout = () => setUser(null);
     window.addEventListener("auth:logout", onForceLogout);
     return () => window.removeEventListener("auth:logout", onForceLogout);
   }, []);
 
-  // Lưu trạng thái sidebar
   useEffect(() => {
     localStorage.setItem("sidebar-collapsed", collapsed);
   }, [collapsed]);
@@ -75,8 +61,10 @@ function App() {
 
   const handleLogout = async () => {
     await logout();
-    setIsLoggedIn(false);
+    setUser(null);
   };
+
+  const menu = MENU_BY_ROLE[role] || [];
 
   return (
     <ToastProvider>
@@ -86,9 +74,9 @@ function App() {
             path="/login"
             element={
               isLoggedIn ? (
-                <Navigate to="/sinh-vien" />
+                <Navigate to={HOME} />
               ) : (
-                <Login onLogin={() => setIsLoggedIn(true)} />
+                <Login onLogin={() => setUser(readSession())} />
               )
             }
           />
@@ -119,49 +107,52 @@ function App() {
                           <UserRound size={24} />
                         </div>
                         <div className="profile-info">
-                          <div className="profile-name">Quản trị viên</div>
-                          <div className="profile-role">
-                            {user.username || "admin"}
-                          </div>
+                          <div className="profile-name">{ROLE_LABEL[role]}</div>
+                          <div className="profile-role">{user.username}</div>
                         </div>
                       </div>
                     </div>
 
                     <div className="sidebar-scroll">
-                      {MENU.map((group) => (
-                        <div className="nav-group" key={group.key}>
-                          <button
-                            className="nav-group-header"
-                            onClick={() => toggleGroup(group.key)}
-                          >
-                            <span className="nav-group-title">
-                              {group.title}
-                            </span>
-                            <ChevronDown
-                              size={16}
-                              className={openGroups[group.key] ? "" : "rotated"}
-                            />
-                          </button>
+                      {menu.map((group) => {
+                        const isOpen = !closedGroups[group.key];
+                        return (
+                          <div className="nav-group" key={group.key}>
+                            <button
+                              className="nav-group-header"
+                              onClick={() => toggleGroup(group.key)}
+                            >
+                              <span className="nav-group-title">
+                                {group.title}
+                              </span>
+                              <ChevronDown
+                                size={16}
+                                className={isOpen ? "" : "rotated"}
+                              />
+                            </button>
 
-                          <div
-                            className={`nav-group-body ${openGroups[group.key] ? "open" : ""}`}
-                          >
-                            <div className="nav-group-inner">
-                              {group.items.map(({ to, label, icon: Icon }) => (
-                                <NavLink
-                                  key={to}
-                                  to={to}
-                                  className="nav-link"
-                                  data-tooltip={label}
-                                >
-                                  <Icon size={20} />
-                                  <span className="nav-text">{label}</span>
-                                </NavLink>
-                              ))}
+                            <div
+                              className={`nav-group-body ${isOpen ? "open" : ""}`}
+                            >
+                              <div className="nav-group-inner">
+                                {group.items.map(
+                                  ({ to, label, icon: Icon }) => (
+                                    <NavLink
+                                      key={to}
+                                      to={to}
+                                      className="nav-link"
+                                      data-tooltip={label}
+                                    >
+                                      <Icon size={20} />
+                                      <span className="nav-text">{label}</span>
+                                    </NavLink>
+                                  ),
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     <div className="sidebar-footer">
@@ -175,14 +166,31 @@ function App() {
                       </button>
                     </div>
                   </aside>
-                  <main className="content">
-                    <Routes>
-                      <Route path="/sinh-vien" element={<SinhVien />} />
-                      <Route path="/de-tai" element={<DeTai />} />
-                      <Route path="/dang-ky" element={<DangKy />} />
-                      <Route path="/" element={<SinhVien />} />
-                    </Routes>
-                  </main>
+
+                  <div className="main-area">
+                    <Topbar user={user} onLogout={handleLogout} />
+                    <main className="content">
+                      <Routes>
+                        {ROUTES.map((r) => (
+                          <Route
+                            key={r.path}
+                            path={r.path}
+                            element={
+                              r.roles.includes(role) ? (
+                                r.element
+                              ) : (
+                                <Navigate to={HOME} replace />
+                              )
+                            }
+                          />
+                        ))}
+                        <Route
+                          path="*"
+                          element={<Navigate to={HOME} replace />}
+                        />
+                      </Routes>
+                    </main>
+                  </div>
                 </div>
               ) : (
                 <Navigate to="/login" />

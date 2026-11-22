@@ -19,7 +19,7 @@ function Login({ onLogin }) {
     try {
       await login(username.trim(), password);
       onLogin();
-      navigate("/sinh-vien");
+      navigate("/tong-quan");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -49,8 +49,9 @@ function Login({ onLogin }) {
 
         <div className="login-box">
           <h2>ĐĂNG NHẬP</h2>
-          <p className="login-subtitle">Dành cho cán bộ quản lý của Khoa</p>
-
+          <p className="login-subtitle">
+            Dành cho quản trị viên, giảng viên và sinh viên
+          </p>
           <form onSubmit={handleSubmit}>
             <div className="input-group">
               <label>Tên đăng nhập</label>

@@ -2,7 +2,7 @@ import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
-import { Public } from '@app/common';
+import { Public, CurrentUser } from '@app/common';
 
 @Controller('auth')
 export class AuthController {
@@ -25,7 +25,7 @@ export class AuthController {
   // Cần access token hợp lệ (guard toàn cục)
   @HttpCode(200)
   @Post('logout')
-  logout() {
-    return this.auth.logout();
+  logout(@CurrentUser('sub') sub: string) {
+    return this.auth.logout(Number(sub));
   }
 }
