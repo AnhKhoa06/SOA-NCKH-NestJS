@@ -10,25 +10,25 @@ Tài liệu đặc tả yêu cầu phần mềm đầy đủ (SRS, chuẩn ISO/I
 
 Tài liệu SRS đặc tả hệ thống **đích** gồm 8 dịch vụ; bảng dưới đây cho biết phần nào đã chạy được, tránh nhầm đặc tả với tiến độ thực tế.
 
-| Hạng mục                                                                               | Trạng thái                                            |
-| -------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Tách monorepo NestJS (`apps/` + `libs/`)                                               | Xong                                                  |
-| Academic Service — hiện là Student service, cổng 3001, CSDL `qldatn_sinhvien`          | Xong (mức cơ bản)                                     |
-| Topic Service, cổng 3002, CSDL `qldatn_detai`                                          | Xong (mức cơ bản)                                     |
-| Registration Service, cổng 3003, CSDL `qldatn_dangky`, gọi HTTP sang 3001 và 3002      | Xong (mức cơ bản)                                     |
-| Auth Service, cổng 3004: đăng nhập/refresh/đăng xuất bằng tài khoản admin trong `.env` | Xong (mức cơ bản)                                     |
-| Guard JWT dùng chung (`libs/common`)                                                   | Xong                                                  |
-| API Gateway, cổng 3000: điểm vào chung, proxy, kiểm tra JWT, CORS tập trung            | Xong (mức cơ bản)                                     |
-| Frontend React gọi qua API Gateway (`VITE_API_URL`, mặc định `http://localhost:3000`)  | Xong (4 trang: đăng nhập, sinh viên, đề tài, đăng ký) |
-| Phân quyền theo vai trò (QTV/GV/SV), Auth có CSDL và quản lý tài khoản (FR-20 → FR-22) | Chưa làm (hiện chỉ có 1 vai trò `admin` cố định)      |
-| Mở rộng Academic Service: khoa, ngành, giảng viên, GPA                                 | Chưa làm                                              |
-| Mở rộng Topic Service: trạng thái đề tài, ngành/GPA yêu cầu, duyệt đề tài              | Chưa làm                                              |
-| Đợt đề tài, hồ sơ, hội đồng, nghiệm thu, quy đổi giờ NCKH (thuộc Topic + Report)       | Chưa làm                                              |
-| Notification Service (cổng 3005), Report Service (cổng 3006)                           | Chưa làm                                              |
-| **AI Service (cổng 3007):** kiểm tra đề tài trùng bằng RAG, gợi ý thành viên hội đồng  | Chưa làm                                              |
-| Hàng đợi thông điệp, sổ đăng ký dịch vụ                                                | Chưa làm                                              |
-| Health check, retry, circuit breaker, Docker                                           | Chưa làm                                              |
-| Màn hình frontend cho các chức năng mới, Swagger/OpenAPI                               | Chưa làm                                              |
+| Hạng mục                                                                                   | Trạng thái                                            |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| Tách monorepo NestJS (`apps/` + `libs/`)                                                   | Xong                                                  |
+| Academic Service — hiện là Student service, cổng 3001, CSDL `qldatn_sinhvien`              | Xong (mức cơ bản)                                     |
+| Topic Service, cổng 3002, CSDL `qldatn_detai`                                              | Xong (mức cơ bản)                                     |
+| Registration Service, cổng 3003, CSDL `qldatn_dangky`, gọi HTTP sang 3001 và 3002          | Xong (mức cơ bản)                                     |
+| Auth Service, cổng 3004: đăng nhập/refresh/đăng xuất bằng tài khoản trong CSDL qldatn_auth | Xong (mức cơ bản)                                     |
+| Guard JWT dùng chung (`libs/common`)                                                       | Xong                                                  |
+| API Gateway, cổng 3000: điểm vào chung, proxy, kiểm tra JWT, CORS tập trung                | Xong (mức cơ bản)                                     |
+| Frontend React gọi qua API Gateway (`VITE_API_URL`, mặc định `http://localhost:3000`)      | Xong (4 trang: đăng nhập, sinh viên, đề tài, đăng ký) |
+| Phân quyền theo vai trò (QTV/GV/SV), Auth có CSDL và quản lý tài khoản (FR-20 → FR-22)     | Xong làm (hiện chỉ có 1 vai trò `admin` cố định)      |
+| Mở rộng Academic Service: khoa, ngành, giảng viên, GPA                                     | Chưa làm                                              |
+| Mở rộng Topic Service: trạng thái đề tài, ngành/GPA yêu cầu, duyệt đề tài                  | Chưa làm                                              |
+| Đợt đề tài, hồ sơ, hội đồng, nghiệm thu, quy đổi giờ NCKH (thuộc Topic + Report)           | Chưa làm                                              |
+| Notification Service (cổng 3005), Report Service (cổng 3006)                               | Chưa làm                                              |
+| **AI Service (cổng 3007):** kiểm tra đề tài trùng bằng RAG, gợi ý thành viên hội đồng      | Chưa làm                                              |
+| Hàng đợi thông điệp, sổ đăng ký dịch vụ                                                    | Chưa làm                                              |
+| Health check, retry, circuit breaker, Docker                                               | Chưa làm                                              |
+| Màn hình frontend cho các chức năng mới, Swagger/OpenAPI                                   | Chưa làm                                              |
 
 ## Kiến trúc đích (theo SRS) — 8 dịch vụ
 
@@ -128,7 +128,8 @@ cd ../frontend_react
 npm install
 ```
 
-2. **Tạo ba CSDL hiện có:** mở MySQL Workbench, chạy lần lượt:
+2. **Tạo bốn CSDL hiện có:** mở MySQL Workbench, chạy lần lượt:
+   - `backend_nestjs/apps/auth-service/database.sql`
    - `backend_nestjs/apps/sinh-vien-service/database.sql`
    - `backend_nestjs/apps/de-tai-service/database.sql`
    - `backend_nestjs/apps/dang-ky-service/database.sql`
@@ -136,6 +137,7 @@ npm install
 3. **Tạo file cấu hình** (không commit `.env`):
    - `backend_nestjs/.env` từ `.env.example` (DB_PASS, ADMIN_USER, ADMIN_PASS, hai JWT secret).
    - `apps/<dịch-vụ>/.env` từ `.env.example` tương ứng (ở `api-gateway` có thêm `CORS_ORIGIN`, mặc định `http://localhost:5173`).
+   - Riêng `apps/auth-service/.env` phải có `DB_NAME=qldatn_auth` (Auth dùng CSDL riêng, không dùng tên CSDL trong `.env` chung).
 
 4. **Chạy các dịch vụ hiện có**, mỗi dịch vụ một terminal, trong `backend_nestjs`:
 
@@ -149,10 +151,11 @@ npx nest start api-gateway
 
 5. **Lấy token:** `POST http://localhost:3000/auth/login` với `{ "username", "password" }`, gửi kèm `Authorization: Bearer <access_token>` cho các request sau — gọi qua cổng **3000** (Gateway).
 
+   Lần chạy đầu, Auth Service tự tạo 3 tài khoản thử trong bảng `TaiKhoan` (khi bảng còn trống): `admin` (QTV, tên và mật khẩu lấy từ `ADMIN_USER`, `ADMIN_PASS`), `gv01` (GV, mã GV001) và `sv01` (SV, mã SV001). Mật khẩu hai tài khoản sau là `Test@12345` (đổi bằng biến `SEED_PASSWORD`).
+
 ## Giới hạn đã biết
 
-- Chỉ có một vai trò `admin` (tài khoản lấy từ `.env`, vai trò ghi cứng trong token, chưa có kiểm tra quyền theo vai trò); refresh token lưu trong bộ nhớ nên khởi động lại Auth Service là phải đăng nhập lại.
-- Auth Service chưa có CSDL riêng; Academic chưa có khoa/ngành/giảng viên/GPA; Topic chưa có trạng thái/duyệt/hồ sơ/hội đồng/nghiệm thu.
+- Topic chưa có trạng thái/duyệt/hồ sơ/hội đồng/nghiệm thu.
 - Chưa có Notification, Report, AI Service; chưa có hàng đợi thông điệp, sổ đăng ký dịch vụ, health check/retry/circuit breaker, Docker.
 - Xem đầy đủ các vấn đề còn mở (OI-01 → OI-09) ở mục 10.2 của tài liệu SRS.
 

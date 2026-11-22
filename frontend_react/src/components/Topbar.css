@@ -1,0 +1,141 @@
+/* Vùng chính: topbar cố định phía trên, nội dung cuộn bên dưới */
+.main-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+.main-area > .content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.topbar {
+  height: 60px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+.topbar-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar-bell {
+  position: relative;
+  display: flex;
+  padding: 8px;
+  border-radius: 8px;
+  color: inherit;
+}
+.topbar-bell:hover {
+  background: #f3f4f6;
+}
+.topbar-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.topbar-user {
+  position: relative;
+}
+.topbar-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.topbar-user-btn:hover {
+  background: #f3f4f6;
+}
+.topbar-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.topbar-user-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+.topbar-user-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.topbar-user-role {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.topbar-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 180px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 50;
+}
+.topbar-menu a,
+.topbar-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.topbar-menu a:hover,
+.topbar-menu button:hover {
+  background: #f3f4f6;
+}
+
+@media (max-width: 640px) {
+  .topbar-user-text {
+    display: none;
+  }
+}
