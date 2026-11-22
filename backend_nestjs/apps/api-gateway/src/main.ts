@@ -8,6 +8,18 @@ import { ApiGatewayModule } from './api-gateway.module';
 async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule, { bodyParser: false });
   const config = app.get(ConfigService);
+
+  // CORS tập trung tại Gateway (điểm vào duy nhất). Phải đăng ký trước mọi
+  // middleware khác để request preflight (OPTIONS) được trả lời ngay,
+  // không bị chuyển tiếp sang dịch vụ phía sau.
+  app.enableCors({
+    origin: (config.get<string>('CORS_ORIGIN') ?? 'http://localhost:5173')
+      .split(',')
+      .map((o) => o.trim()),
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   const jwt = app.get(JwtService);
   const secret = config.get<string>('JWT_ACCESS_SECRET');
 

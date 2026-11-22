@@ -42,7 +42,9 @@ function Login({ onLogin }) {
             className="login-logo"
           />
           <div className="login-school">TRƯỜNG ĐẠI HỌC QUY NHƠN</div>
-          <div className="login-system">HỆ THỐNG QUẢN LÝ ĐỒ ÁN TỐT NGHIỆP</div>
+          <div className="login-system">
+            HỆ THỐNG QUẢN LÝ ĐỀ TÀI NGHIÊN CỨU KHOA HỌC
+          </div>
         </div>
 
         <div className="login-box">

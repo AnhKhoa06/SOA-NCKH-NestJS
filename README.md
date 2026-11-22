@@ -6,27 +6,29 @@ Hệ thống (tên gọi **SOA-NCKH**) quản lý toàn bộ quy trình nghiên 
 
 Tài liệu đặc tả yêu cầu phần mềm đầy đủ (SRS, chuẩn ISO/IEC/IEEE 29148): yêu cầu chức năng FR-01 → FR-33, phi chức năng NFR-01 → NFR-16, mô hình UML, phân tích kiến trúc SOA, mô hình dữ liệu, kiểm thử và ma trận truy vết — nằm trong tài liệu SRS của nhóm (`SRS_SOA-NCKH.docx`). Mã yêu cầu trong README này lấy theo tài liệu đó.
 
-## Trạng thái hiện tại (cập nhật 11/11/2026)
+## Trạng thái hiện tại (cập nhật 22/11/2026)
 
 Tài liệu SRS đặc tả hệ thống **đích** gồm 8 dịch vụ; bảng dưới đây cho biết phần nào đã chạy được, tránh nhầm đặc tả với tiến độ thực tế.
 
-| Hạng mục                                                                                   | Trạng thái             |
-| ------------------------------------------------------------------------------------------ | ----------------------- |
-| Tách monorepo NestJS (`apps/` + `libs/`)                                                    | Xong                     |
-| Academic Service — hiện là Student service, cổng 3001, CSDL `qldatn_sinhvien`              | Xong (mức cơ bản)       |
-| Topic Service, cổng 3002, CSDL `qldatn_detai`                                               | Xong (mức cơ bản)       |
-| Registration Service, cổng 3003, CSDL `qldatn_dangky`, gọi HTTP sang 3001 và 3002          | Xong (mức cơ bản)       |
-| Auth Service, cổng 3004: đăng nhập/refresh/đăng xuất bằng tài khoản admin trong `.env`     | Xong (mức cơ bản)       |
-| Guard JWT dùng chung (`libs/common`)                                                        | Xong                     |
-| API Gateway, cổng 3000: điểm vào chung                                                      | Xong (mức cơ bản)       |
-| Mở rộng Academic Service: khoa, ngành, giảng viên, GPA                                      | Chưa làm                |
-| Mở rộng Topic Service: trạng thái đề tài, ngành/GPA yêu cầu, duyệt đề tài                   | Chưa làm                |
-| Đợt đề tài, hồ sơ, hội đồng, nghiệm thu, quy đổi giờ NCKH (thuộc Topic + Report)           | Chưa làm                |
-| Notification Service (cổng 3005), Report Service (cổng 3006)                               | Chưa làm                |
-| **AI Service (cổng 3007):** kiểm tra đề tài trùng bằng RAG, gợi ý thành viên hội đồng      | Chưa làm                |
-| Hàng đợi thông điệp, sổ đăng ký dịch vụ                                                     | Chưa làm                |
-| Health check, retry, circuit breaker, Docker                                                | Chưa làm                |
-| Cập nhật frontend gọi qua kiến trúc mới                                                     | Chưa làm                |
+| Hạng mục                                                                               | Trạng thái                                            |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Tách monorepo NestJS (`apps/` + `libs/`)                                               | Xong                                                  |
+| Academic Service — hiện là Student service, cổng 3001, CSDL `qldatn_sinhvien`          | Xong (mức cơ bản)                                     |
+| Topic Service, cổng 3002, CSDL `qldatn_detai`                                          | Xong (mức cơ bản)                                     |
+| Registration Service, cổng 3003, CSDL `qldatn_dangky`, gọi HTTP sang 3001 và 3002      | Xong (mức cơ bản)                                     |
+| Auth Service, cổng 3004: đăng nhập/refresh/đăng xuất bằng tài khoản admin trong `.env` | Xong (mức cơ bản)                                     |
+| Guard JWT dùng chung (`libs/common`)                                                   | Xong                                                  |
+| API Gateway, cổng 3000: điểm vào chung, proxy, kiểm tra JWT, CORS tập trung            | Xong (mức cơ bản)                                     |
+| Frontend React gọi qua API Gateway (`VITE_API_URL`, mặc định `http://localhost:3000`)  | Xong (4 trang: đăng nhập, sinh viên, đề tài, đăng ký) |
+| Phân quyền theo vai trò (QTV/GV/SV), Auth có CSDL và quản lý tài khoản (FR-20 → FR-22) | Chưa làm (hiện chỉ có 1 vai trò `admin` cố định)      |
+| Mở rộng Academic Service: khoa, ngành, giảng viên, GPA                                 | Chưa làm                                              |
+| Mở rộng Topic Service: trạng thái đề tài, ngành/GPA yêu cầu, duyệt đề tài              | Chưa làm                                              |
+| Đợt đề tài, hồ sơ, hội đồng, nghiệm thu, quy đổi giờ NCKH (thuộc Topic + Report)       | Chưa làm                                              |
+| Notification Service (cổng 3005), Report Service (cổng 3006)                           | Chưa làm                                              |
+| **AI Service (cổng 3007):** kiểm tra đề tài trùng bằng RAG, gợi ý thành viên hội đồng  | Chưa làm                                              |
+| Hàng đợi thông điệp, sổ đăng ký dịch vụ                                                | Chưa làm                                              |
+| Health check, retry, circuit breaker, Docker                                           | Chưa làm                                              |
+| Màn hình frontend cho các chức năng mới, Swagger/OpenAPI                               | Chưa làm                                              |
 
 ## Kiến trúc đích (theo SRS) — 8 dịch vụ
 
@@ -58,23 +60,23 @@ Nguyên tắc đang áp dụng (chi tiết ở Chương 7 của SRS):
 
 ## Các dịch vụ (tên hiện tại trong mã nguồn → tên đích theo SRS)
 
-| Tên trong mã nguồn hiện tại | Tên đích (SRS) | Cổng | CSDL | Phụ trách |
-| --------------------------- | --------------- | ---- | ---- | --------- |
-| `apps/api-gateway`          | API Gateway      | 3000 | không có | Nhóm |
-| `apps/sinh-vien-service`    | Academic Service | 3001 | `qldatn_sinhvien` | Khương |
-| `apps/de-tai-service`       | Topic Service    | 3002 | `qldatn_detai` | Khang |
-| `apps/dang-ky-service`      | Registration Service | 3003 | `qldatn_dangky` | Khoa (nhóm trưởng) |
-| `apps/auth-service`         | Auth Service     | 3004 | `qldatn_auth` (dự kiến) | Nhóm |
-| *(chưa tạo)*                 | Notification Service | 3005 | `qldatn_thongbao` (dự kiến) | Lịch |
-| *(chưa tạo)*                 | Report Service   | 3006 | `qldatn_baocao` (dự kiến) | Huy |
-| *(chưa tạo)*                 | AI Service       | 3007 | `qldatn_ai` (dự kiến) + kho vector | Khoa (nhóm trưởng) |
+| Tên trong mã nguồn hiện tại | Tên đích (SRS)       | Cổng | CSDL                               | Phụ trách          |
+| --------------------------- | -------------------- | ---- | ---------------------------------- | ------------------ |
+| `apps/api-gateway`          | API Gateway          | 3000 | không có                           | Nhóm               |
+| `apps/sinh-vien-service`    | Academic Service     | 3001 | `qldatn_sinhvien`                  | Khương             |
+| `apps/de-tai-service`       | Topic Service        | 3002 | `qldatn_detai`                     | Khang              |
+| `apps/dang-ky-service`      | Registration Service | 3003 | `qldatn_dangky`                    | Khoa (nhóm trưởng) |
+| `apps/auth-service`         | Auth Service         | 3004 | `qldatn_auth` (dự kiến)            | Nhóm               |
+| _(chưa tạo)_                | Notification Service | 3005 | `qldatn_thongbao` (dự kiến)        | Lịch               |
+| _(chưa tạo)_                | Report Service       | 3006 | `qldatn_baocao` (dự kiến)          | Huy                |
+| _(chưa tạo)_                | AI Service           | 3007 | `qldatn_ai` (dự kiến) + kho vector | Khoa (nhóm trưởng) |
 
 Lưu ý tên database vẫn giữ tiền tố `qldatn_` (viết tắt cũ của "quản lý đồ án tốt nghiệp") dù đề tài đã đổi tên — việc đổi tiền tố database là tùy chọn, không bắt buộc, nhóm có thể giữ nguyên để đỡ phải sửa lại mọi cấu hình `.env`, `database.sql` đã có.
 
 ## Cấu trúc dự án
 
 ```
-SOA-NCKH-NestJS/                     (tên repo đề xuất, xem phần "Đổi tên repo" bên dưới)
+SOA-NCKH-NestJS/
 ├── backend_nestjs/
 │   ├── apps/
 │   │   ├── api-gateway/
@@ -84,27 +86,28 @@ SOA-NCKH-NestJS/                     (tên repo đề xuất, xem phần "Đổi
 │   │   ├── dang-ky-service/         # → Registration Service
 │   │   ├── notification-service/    # (sẽ tạo)
 │   │   ├── report-service/          # (sẽ tạo)
-│   │   └── ai-service/              # (sẽ tạo)
+│   │   └── ai-service/              # (sẽ tạo, Python + FastAPI, không phải NestJS)
 │   ├── libs/common/
 │   ├── .env.example
 │   ├── nest-cli.json
 │   └── tsconfig.json
 ├── frontend_react/
-└── docs/
-    └── SRS_SOA-NCKH.docx            # Tài liệu đặc tả yêu cầu phần mềm đầy đủ
+├── docs/
+│   └── SRS_SOA-NCKH.docx            # Tài liệu đặc tả yêu cầu phần mềm đầy đủ
+└── phancong.md                      # Phân công công việc và hướng dẫn cho từng thành viên
 ```
 
 ## Đối chiếu 7 tính chất SOA (mức hiện tại, xem Chương 7.11 của SRS để biết mức đích)
 
-| Tính chất                            | Mức hiện tại      | Ghi chú |
-| ------------------------------------- | ------------------ | ------- |
-| 1. Liên kết lỏng (NFR-01)             | Đáp ứng (chưa container) | Cổng, CSDL riêng; chưa Docker. |
-| 2. Sử dụng lại dịch vụ (NFR-04)       | Đáp ứng một phần   | Registration dùng lại API Academic và Topic. |
-| 3. Bất đồng bộ (NFR-05)               | Chưa               | Chưa có hàng đợi thông điệp. |
-| 4. Quản lý chính sách (NFR-06)        | Đáp ứng một phần   | Có Gateway làm điểm vào chung; mỗi dịch vụ vẫn tự kiểm tra JWT. |
-| 5. Khả năng cộng tác (NFR-03)         | Đáp ứng một phần   | REST/JSON; chưa có OpenAPI/Swagger. |
-| 6. Dò tìm và ràng buộc động (NFR-07)  | Chưa               | Địa chỉ dịch vụ ghi tĩnh trong `.env`. |
-| 7. Tự phục hồi (NFR-08)               | Đáp ứng một phần   | Trả 503 khi dịch vụ phụ thuộc không phản hồi; chưa health check/retry/circuit breaker. |
+| Tính chất                            | Mức hiện tại             | Ghi chú                                                                                |
+| ------------------------------------ | ------------------------ | -------------------------------------------------------------------------------------- |
+| 1. Liên kết lỏng (NFR-01)            | Đáp ứng (chưa container) | Cổng, CSDL riêng; chưa Docker.                                                         |
+| 2. Sử dụng lại dịch vụ (NFR-04)      | Đáp ứng một phần         | Registration dùng lại API Academic và Topic.                                           |
+| 3. Bất đồng bộ (NFR-05)              | Chưa                     | Chưa có hàng đợi thông điệp.                                                           |
+| 4. Quản lý chính sách (NFR-06)       | Đáp ứng một phần         | Có Gateway làm điểm vào chung; mỗi dịch vụ vẫn tự kiểm tra JWT.                        |
+| 5. Khả năng cộng tác (NFR-03)        | Đáp ứng một phần         | REST/JSON; chưa có OpenAPI/Swagger.                                                    |
+| 6. Dò tìm và ràng buộc động (NFR-07) | Chưa                     | Địa chỉ dịch vụ ghi tĩnh trong `.env`.                                                 |
+| 7. Tự phục hồi (NFR-08)              | Đáp ứng một phần         | Trả 503 khi dịch vụ phụ thuộc không phản hồi; chưa health check/retry/circuit breaker. |
 
 ## Yêu cầu môi trường
 
@@ -117,8 +120,8 @@ SOA-NCKH-NestJS/                     (tên repo đề xuất, xem phần "Đổi
 1. **Clone và cài thư viện:**
 
 ```
-git clone https://github.com/AnhKhoa06/<tên-repo-mới>.git
-cd <tên-repo-mới>/backend_nestjs
+git clone https://github.com/AnhKhoa06/SOA-NCKH-NestJS.git
+cd SOA-NCKH-NestJS/backend_nestjs
 npm install
 
 cd ../frontend_react
@@ -132,7 +135,7 @@ npm install
 
 3. **Tạo file cấu hình** (không commit `.env`):
    - `backend_nestjs/.env` từ `.env.example` (DB_PASS, ADMIN_USER, ADMIN_PASS, hai JWT secret).
-   - `apps/<dịch-vụ>/.env` từ `.env.example` tương ứng.
+   - `apps/<dịch-vụ>/.env` từ `.env.example` tương ứng (ở `api-gateway` có thêm `CORS_ORIGIN`, mặc định `http://localhost:5173`).
 
 4. **Chạy các dịch vụ hiện có**, mỗi dịch vụ một terminal, trong `backend_nestjs`:
 
@@ -148,7 +151,7 @@ npx nest start api-gateway
 
 ## Giới hạn đã biết
 
-- Frontend chưa trỏ về API Gateway.
+- Chỉ có một vai trò `admin` (tài khoản lấy từ `.env`, vai trò ghi cứng trong token, chưa có kiểm tra quyền theo vai trò); refresh token lưu trong bộ nhớ nên khởi động lại Auth Service là phải đăng nhập lại.
 - Auth Service chưa có CSDL riêng; Academic chưa có khoa/ngành/giảng viên/GPA; Topic chưa có trạng thái/duyệt/hồ sơ/hội đồng/nghiệm thu.
 - Chưa có Notification, Report, AI Service; chưa có hàng đợi thông điệp, sổ đăng ký dịch vụ, health check/retry/circuit breaker, Docker.
 - Xem đầy đủ các vấn đề còn mở (OI-01 → OI-09) ở mục 10.2 của tài liệu SRS.
@@ -161,13 +164,16 @@ npx nest start api-gateway
 4. Đợt đề tài, hồ sơ, hội đồng, nghiệm thu, nhắc hạn, quy đổi giờ NCKH.
 5. **AI Service:** thử mô hình embedding trên bộ đề tài mẫu, dựng kho vector, kiểm tra trùng (RAG) và gợi ý hội đồng.
 6. Hàng đợi thông điệp, sổ đăng ký dịch vụ, health check/retry/circuit breaker, Docker Compose.
-7. Cập nhật frontend gọi qua Gateway; bổ sung Swagger/OpenAPI.
+7. Màn hình frontend cho các chức năng mới; bổ sung Swagger/OpenAPI.
+
+Chi tiết từng đầu việc, người phụ trách và thứ tự làm nằm trong [`phancong.md`](phancong.md).
 
 ## Quy tắc làm việc nhóm
 
 - Mỗi người chỉ sửa dịch vụ của mình. Phần dùng chung (`libs/common`, `apps/api-gateway`, `nest-cli.json`, `tsconfig.json`, `frontend_react/src/api.js`) do nhóm trưởng sửa.
 - Tên biến môi trường và cổng đặt trong `.env`, không ghi cứng trong mã.
 - Mọi quyết định/thay đổi về đặc tả phải đối chiếu với tài liệu SRS (`docs/SRS_SOA-NCKH.docx`) trước khi code.
+- Việc của mỗi người ghi trong `phancong.md`; làm xong đầu việc nào thì tick vào file đó trong Pull Request của mình.
 
 ## Lưu ý về Git
 
