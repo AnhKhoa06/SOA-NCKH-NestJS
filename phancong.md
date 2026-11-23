@@ -230,7 +230,7 @@ Hiện trạng: tạo, sửa, xóa đăng ký cơ bản, trạng thái là chu�
 - [x] **B3. `POST /dang-ky` (SV):** mã sinh viên lấy từ token; ghi `CHO_DUYET`; phát EV-06; trả kết quả ngay, không chờ thông báo. (FR-10)
 - [x] **B4. `PATCH /dang-ky/:id/huy` (SV):** chỉ đăng ký của mình, chỉ khi `CHO_DUYET` (BR-06); phát EV-09. (FR-12)
 - [x] **B5. `PATCH /dang-ky/:id/duyet` và `/tu-choi` (GV):** chỉ giảng viên phụ trách đề tài (BR-08); khi duyệt, **trong cùng một giao dịch** khóa dòng chỉ tiêu (`SELECT ... FOR UPDATE`), hỏi lại Topic trạng thái và chỉ tiêu, kiểm tra `số đã duyệt < chỉ tiêu` (BR-04); từ chối bắt buộc có lý do (`THIEU_LY_DO`, BR-10); phát EV-07 hoặc EV-08. (FR-13)
-- [ ] **B6. `GET /dang-ky` (theo quyền):** SV chỉ thấy của mình, GV thấy của đề tài mình, QTV thấy tất cả; lọc theo đề tài, trạng thái; phân trang. Tên sinh viên, tên đề tài lấy **theo lô**; dịch vụ kia lỗi thì hiển thị theo mã (giảm chức năng). (FR-14)
+- [x] **B6. `GET /dang-ky` (theo quyền):** SV chỉ thấy của mình, GV thấy của đề tài mình, QTV thấy tất cả; lọc theo đề tài, trạng thái; phân trang. Tên sinh viên, tên đề tài lấy **theo lô**; dịch vụ kia lỗi thì hiển thị theo mã (giảm chức năng). (FR-14)
 - [ ] **B7. Sự kiện:** phát EV-06, 07, 08, 09 và EV-11 (`ThaoTacQuanTrong`) qua `libs/events`.
 - [ ] **B8. Kiểm thử đồng thời:** hai giảng viên duyệt cùng lúc hai đăng ký vào đề tài chỉ còn một chỗ, chỉ một thành công.
 - [ ] **B9. Frontend:** trang đăng ký theo vai trò (SV đăng ký, hủy; GV duyệt, từ chối kèm lý do; QTV xem). Trang hiện tại tải cả danh sách `/sinh-vien` để hiển thị tên: SV không nên đọc danh sách của người khác, phải sửa (mã SV lấy từ token, tên lấy theo lô).

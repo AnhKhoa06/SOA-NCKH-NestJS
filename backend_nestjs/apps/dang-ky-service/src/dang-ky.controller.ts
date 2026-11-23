@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser, Roles, RolesGuard } from '@app/common';
@@ -17,6 +18,7 @@ import { DangKyService } from './dang-ky.service';
 import { CreateDangKyDto } from './dto/create-dang-ky.dto';
 import { UpdateDangKyDto } from './dto/update-dang-ky.dto';
 import { TuChoiDangKyDto } from './dto/tu-choi-dang-ky.dto';
+import { QueryDangKyDto } from './dto/query-dang-ky.dto';
 
 // Mã sinh viên của người đang thao tác luôn lấy từ token
 function maSVTuToken(user: CurrentUserPayload): string {
@@ -91,15 +93,23 @@ export class DangKyController {
     return this.service.tuChoi(id, maGVTuToken(user), dto.lyDo, auth);
   }
 
-  // B6 sẽ lọc theo vai trò
+  // B6 (FR-14): kết quả tự lọc theo vai trò trong service
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(
+    @Query() q: QueryDangKyDto,
+    @CurrentUser() user: CurrentUserPayload,
+    @Headers('authorization') auth: string,
+  ) {
+    return this.service.timKiem(user, q, auth);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.service.findOne(id);
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: CurrentUserPayload,
+    @Headers('authorization') auth: string,
+  ) {
+    return this.service.xemMot(id, user, auth);
   }
 
   // Sửa trực tiếp và xóa cứng chỉ còn cho QTV (khớp luật Gateway)

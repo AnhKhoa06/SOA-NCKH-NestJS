@@ -9,11 +9,13 @@ import {
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, FindOptionsWhere, In, Repository } from 'typeorm';
+import type { CurrentUserPayload } from '@app/common';
 import { firstValueFrom } from 'rxjs';
 import { DangKy } from './dang-ky.entity';
 import { CreateDangKyDto } from './dto/create-dang-ky.dto';
 import { UpdateDangKyDto } from './dto/update-dang-ky.dto';
+import { QueryDangKyDto } from './dto/query-dang-ky.dto';
 import { ConfigService } from '@nestjs/config';
 import { TRANG_THAI_CON_HIEU_LUC, TrangThaiDangKy } from './trang-thai-dang-ky';
 import { ChiTieuDeTai } from './chi-tieu-de-tai.entity';
@@ -356,6 +358,179 @@ export class DangKyService {
     }
     // B7 sẽ phát EV-08 (DangKyBiTuChoi) tại đây khi có libs/events
     return await this.findOne(id);
+  }
+
+  // ===== B6 (FR-14): xem danh sách theo vai trò =====
+
+  private maDinhDanhBatBuoc(user: CurrentUserPayload): string {
+    if (!user?.maDinhDanh) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'KHONG_DU_QUYEN',
+        message: 'Tài khoản không gắn với mã định danh',
+      });
+    }
+    return user.maDinhDanh;
+  }
+
+  // Các đề tài do giảng viên phụ trách, hỏi Topic. Chỉ nhận dòng có maGV khớp,
+  // nên nếu Topic chưa lọc theo maGV hoặc chưa trả maGV thì kết quả rỗng (an toàn),
+  // không bao giờ lộ đăng ký của đề tài người khác.
+  private async deTaiCuaGV(maGV: string, auth?: string): Promise<number[]> {
+    const body = await this.callService(
+      `${this.deTaiUrl}?maGV=${encodeURIComponent(maGV)}&size=100`,
+      'Không tìm thấy đề tài',
+      auth,
+    );
+    const ds: any[] = Array.isArray(body) ? body : (body?.data ?? []);
+    return ds
+      .filter((d) => (d.maGV ?? d.MaGV) === maGV)
+      .map((d) => Number(d.maDeTai ?? d.MaDeTai))
+      .filter((n) => Number.isInteger(n));
+  }
+
+  // Tên sinh viên lấy MỘT lần theo lô. Lỗi thì trả rỗng, giao diện hiển thị theo mã.
+  private async layTenSinhVien(
+    maSVs: string[],
+    auth?: string,
+  ): Promise<Map<string, string>> {
+    const kq = new Map<string, string>();
+    if (!maSVs.length) return kq;
+    try {
+      const body = await this.callService(
+        `${this.sinhVienUrl}?maSV=${encodeURIComponent(maSVs.join(','))}`,
+        'Không tìm thấy sinh viên',
+        auth,
+      );
+      const ds: any[] = Array.isArray(body) ? body : (body?.data ?? []);
+      const can = new Set(maSVs);
+      for (const sv of ds) {
+        const ma = sv.maSV ?? sv.MaSV;
+        if (can.has(ma)) kq.set(ma, sv.hoTen ?? sv.HoTen ?? null);
+      }
+    } catch {
+      /* giảm chức năng: để tên rỗng */
+    }
+    return kq;
+  }
+
+  // Tên đề tài: gọi song song theo từng mã khác nhau, dịch vụ lỗi thì để rỗng
+  private async layTenDeTai(
+    maDeTais: number[],
+    auth?: string,
+  ): Promise<Map<number, string>> {
+    const kq = new Map<number, string>();
+    const kqs = await Promise.allSettled(
+      maDeTais.map((id) =>
+        this.callService(
+          `${this.deTaiUrl}/${id}`,
+          'Không tìm thấy đề tài',
+          auth,
+        ),
+      ),
+    );
+    kqs.forEach((r, i) => {
+      if (r.status === 'fulfilled') {
+        kq.set(maDeTais[i], r.value.tenDeTai ?? r.value.TenDeTai ?? null);
+      }
+    });
+    return kq;
+  }
+
+  async timKiem(user: CurrentUserPayload, q: QueryDangKyDto, auth?: string) {
+    const page = Math.max(1, parseInt(q.page ?? '1', 10) || 1);
+    const size = Math.min(100, Math.max(1, parseInt(q.size ?? '20', 10) || 20));
+    const where: FindOptionsWhere<DangKy> = {};
+
+    if (q.trangThai) {
+      if (
+        !Object.values(TrangThaiDangKy).includes(q.trangThai as TrangThaiDangKy)
+      ) {
+        throw new BadRequestException('Trạng thái lọc không hợp lệ');
+      }
+      where.trangThai = q.trangThai as TrangThaiDangKy;
+    }
+    let maDeTaiLoc: number | undefined;
+    if (q.maDeTai) {
+      maDeTaiLoc = Number(q.maDeTai);
+      if (!Number.isInteger(maDeTaiLoc)) {
+        throw new BadRequestException('Mã đề tài lọc không hợp lệ');
+      }
+    }
+
+    if (user.role === 'SV') {
+      where.maSV = this.maDinhDanhBatBuoc(user);
+      if (maDeTaiLoc !== undefined) where.maDeTai = maDeTaiLoc;
+    } else {
+      if (q.maSV) where.maSV = q.maSV;
+      if (user.role === 'GV') {
+        let ids = await this.deTaiCuaGV(this.maDinhDanhBatBuoc(user), auth);
+        if (maDeTaiLoc !== undefined) {
+          ids = ids.filter((x) => x === maDeTaiLoc);
+        }
+        if (!ids.length)
+          return { data: [], page, size, total: 0, totalPages: 0 };
+        where.maDeTai = In(ids);
+      } else if (maDeTaiLoc !== undefined) {
+        where.maDeTai = maDeTaiLoc;
+      }
+    }
+
+    const [rows, total] = await this.repo.findAndCount({
+      where,
+      order: { maDangKy: 'DESC' },
+      skip: (page - 1) * size,
+      take: size,
+    });
+
+    // Sinh viên chỉ xem đăng ký của mình nên không cần tra tên sinh viên
+    const tenSV =
+      user.role === 'SV'
+        ? new Map<string, string>()
+        : await this.layTenSinhVien(
+            [...new Set(rows.map((r) => r.maSV))],
+            auth,
+          );
+    const tenDT = await this.layTenDeTai(
+      [...new Set(rows.map((r) => r.maDeTai))],
+      auth,
+    );
+
+    return {
+      data: rows.map((r) => ({
+        ...r,
+        tenSV: tenSV.get(r.maSV) ?? null,
+        tenDeTai: tenDT.get(r.maDeTai) ?? null,
+      })),
+      page,
+      size,
+      total,
+      totalPages: Math.ceil(total / size),
+    };
+  }
+
+  // Xem một đăng ký: SV chỉ của mình, GV chỉ của đề tài mình, QTV tất cả
+  async xemMot(id: number, user: CurrentUserPayload, auth?: string) {
+    const dk = await this.findOne(id);
+    if (user.role === 'SV') {
+      if (dk.maSV !== this.maDinhDanhBatBuoc(user)) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'KHONG_DU_QUYEN',
+          message: 'Bạn chỉ được xem đăng ký của chính mình',
+        });
+      }
+    } else if (user.role === 'GV') {
+      const ids = await this.deTaiCuaGV(this.maDinhDanhBatBuoc(user), auth);
+      if (!ids.includes(dk.maDeTai)) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'KHONG_DU_QUYEN',
+          message: 'Đăng ký này không thuộc đề tài của bạn',
+        });
+      }
+    }
+    return dk;
   }
 
   async remove(id: number): Promise<{ message: string }> {
