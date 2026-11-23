@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -169,9 +170,10 @@ export class DangKyService {
     }
   }
 
-  async create(dto: CreateDangKyDto, auth?: string): Promise<DangKy> {
-    await this.kiemTraDieuKien(dto.maSV, dto.maDeTai, auth);
-    return await this.luu(this.repo.create(dto));
+  async create(maSV: string, maDeTai: number, auth?: string): Promise<DangKy> {
+    await this.kiemTraDieuKien(maSV, maDeTai, auth);
+    // B7 sẽ phát EV-06 (DangKyDuocTao) tại đây khi có libs/events
+    return await this.luu(this.repo.create({ maSV, maDeTai }));
   }
 
   async findAll(): Promise<DangKy[]> {
@@ -195,6 +197,37 @@ export class DangKyService {
     }
     Object.assign(dk, dto);
     return await this.luu(dk);
+  }
+
+  /**
+   * FR-12 / B4: sinh viên hủy đăng ký của chính mình.
+   * - Chỉ chủ đăng ký mới hủy được (403).
+   * - Chỉ hủy khi còn CHO_DUYET (BR-06), sai thì 409 TRANG_THAI_KHONG_HOP_LE.
+   * Dùng UPDATE có điều kiện để an toàn khi giảng viên duyệt cùng lúc:
+   * chỉ một bên thắng, không cần khóa.
+   */
+  async huy(id: number, maSV: string): Promise<DangKy> {
+    const dk = await this.findOne(id);
+    if (dk.maSV !== maSV) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'KHONG_DU_QUYEN',
+        message: 'Bạn chỉ được hủy đăng ký của chính mình',
+      });
+    }
+    const kq = await this.repo.update(
+      { maDangKy: id, trangThai: TrangThaiDangKy.CHO_DUYET },
+      { trangThai: TrangThaiDangKy.DA_HUY },
+    );
+    if (!kq.affected) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'TRANG_THAI_KHONG_HOP_LE',
+        message: 'Chỉ được hủy đăng ký đang chờ duyệt',
+      });
+    }
+    // B7 sẽ phát EV-09 (DangKyDaHuy) tại đây khi có libs/events
+    return await this.findOne(id);
   }
 
   async remove(id: number): Promise<{ message: string }> {
