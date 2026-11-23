@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -8,23 +9,26 @@ import {
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
 import { DangKy } from './dang-ky.entity';
 import { CreateDangKyDto } from './dto/create-dang-ky.dto';
 import { UpdateDangKyDto } from './dto/update-dang-ky.dto';
 import { ConfigService } from '@nestjs/config';
 import { TRANG_THAI_CON_HIEU_LUC, TrangThaiDangKy } from './trang-thai-dang-ky';
+import { ChiTieuDeTai } from './chi-tieu-de-tai.entity';
 
 @Injectable()
 export class DangKyService {
   private readonly sinhVienUrl: string;
   private readonly deTaiUrl: string;
+  private readonly choPhepThieuMaGV: boolean;
 
   constructor(
     @InjectRepository(DangKy)
     private readonly repo: Repository<DangKy>,
     private readonly http: HttpService,
+    private readonly dataSource: DataSource,
     config: ConfigService,
   ) {
     this.sinhVienUrl = config.get<string>(
@@ -35,6 +39,9 @@ export class DangKyService {
       'DETAI_URL',
       'http://localhost:3002/de-tai',
     );
+    // Chỉ để chạy thử khi Topic chưa trả maGV. Mặc định tắt: thiếu maGV thì không cho duyệt.
+    this.choPhepThieuMaGV =
+      config.get<string>('ALLOW_MISSING_MAGV', 'false') === 'true';
   }
 
   // Gọi dịch vụ khác qua HTTP/REST
@@ -227,6 +234,127 @@ export class DangKyService {
       });
     }
     // B7 sẽ phát EV-09 (DangKyDaHuy) tại đây khi có libs/events
+    return await this.findOne(id);
+  }
+
+  // BR-08: chỉ giảng viên phụ trách đề tài mới được duyệt hoặc từ chối.
+  // Hỏi lại Topic mỗi lần, không tin dữ liệu nào lưu ở đây.
+  private async layDeTaiDeXuLy(dk: DangKy, maGV: string, auth?: string) {
+    const dt = await this.callService(
+      `${this.deTaiUrl}/${dk.maDeTai}`,
+      `Không tìm thấy đề tài ${dk.maDeTai}`,
+      auth,
+    );
+    const maGVDeTai = dt.maGV ?? dt.MaGV;
+    if (maGVDeTai == null) {
+      if (!this.choPhepThieuMaGV) {
+        throw this.khongDat(
+          'DETAI_THIEU_GIANG_VIEN',
+          'Đề tài chưa có thông tin giảng viên phụ trách',
+        );
+      }
+    } else if (maGVDeTai !== maGV) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'KHONG_DU_QUYEN',
+        message: 'Bạn không phải giảng viên phụ trách đề tài này',
+      });
+    }
+    return dt;
+  }
+
+  /**
+   * FR-13 / B5: duyệt đăng ký.
+   * Trong MỘT giao dịch: khóa dòng chỉ tiêu của đề tài (FOR UPDATE), đếm lại số
+   * đã duyệt, rồi mới duyệt. Hai giảng viên duyệt cùng lúc vào đề tài còn một
+   * chỗ thì người sau phải chờ khóa, đếm lại thấy đủ và nhận 409 HET_CHI_TIEU (BR-04).
+   * UPDATE có điều kiện CHO_DUYET chặn trường hợp SV vừa hủy hoặc đã bị xử lý.
+   */
+  async duyet(id: number, maGV: string, auth?: string): Promise<DangKy> {
+    const dk = await this.findOne(id);
+    const dt = await this.layDeTaiDeXuLy(dk, maGV, auth);
+
+    if (dt.trangThai !== undefined && dt.trangThai !== 'DANG_MO') {
+      throw this.khongDat('DETAI_KHONG_MO', 'Đề tài hiện không mở');
+    }
+    const chiTieu =
+      dt.chiTieu ?? dt.ChiTieu ?? dt.soLuongToiDa ?? dt.SoLuongToiDa;
+
+    await this.dataSource.transaction(async (m) => {
+      // Bảo đảm có dòng khóa (bỏ qua nếu đã có), rồi khóa nó
+      await m.query(
+        'INSERT IGNORE INTO ChiTieuDeTai (MaDeTai, SoDaDuyet) VALUES (?, 0)',
+        [dk.maDeTai],
+      );
+      await m.findOne(ChiTieuDeTai, {
+        where: { maDeTai: dk.maDeTai },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      // Đếm SAU khi giữ khóa: số đếm này là nguồn sự thật, không dùng SoDaDuyet cũ
+      const daDuyet = await m.count(DangKy, {
+        where: { maDeTai: dk.maDeTai, trangThai: TrangThaiDangKy.DA_DUYET },
+      });
+      if (chiTieu != null && daDuyet >= Number(chiTieu)) {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'HET_CHI_TIEU',
+          message: 'Đề tài đã đủ số lượng sinh viên',
+        });
+      }
+
+      const kq = await m.update(
+        DangKy,
+        { maDangKy: id, trangThai: TrangThaiDangKy.CHO_DUYET },
+        { trangThai: TrangThaiDangKy.DA_DUYET },
+      );
+      if (!kq.affected) {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'TRANG_THAI_KHONG_HOP_LE',
+          message: 'Chỉ duyệt được đăng ký đang chờ duyệt',
+        });
+      }
+      await m.update(
+        ChiTieuDeTai,
+        { maDeTai: dk.maDeTai },
+        { soDaDuyet: daDuyet + 1 },
+      );
+    });
+    // B7 sẽ phát EV-07 (DangKyDuocDuyet) tại đây khi có libs/events
+    return await this.findOne(id);
+  }
+
+  // FR-13 / B5: từ chối đăng ký, bắt buộc có lý do (BR-10)
+  async tuChoi(
+    id: number,
+    maGV: string,
+    lyDo: string | undefined,
+    auth?: string,
+  ): Promise<DangKy> {
+    const ly = (lyDo ?? '').trim();
+    if (!ly) {
+      throw new BadRequestException({
+        statusCode: 400,
+        code: 'THIEU_LY_DO',
+        message: 'Phải nhập lý do từ chối',
+      });
+    }
+    const dk = await this.findOne(id);
+    await this.layDeTaiDeXuLy(dk, maGV, auth);
+
+    const kq = await this.repo.update(
+      { maDangKy: id, trangThai: TrangThaiDangKy.CHO_DUYET },
+      { trangThai: TrangThaiDangKy.BI_TU_CHOI, lyDoTuChoi: ly },
+    );
+    if (!kq.affected) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'TRANG_THAI_KHONG_HOP_LE',
+        message: 'Chỉ từ chối được đăng ký đang chờ duyệt',
+      });
+    }
+    // B7 sẽ phát EV-08 (DangKyBiTuChoi) tại đây khi có libs/events
     return await this.findOne(id);
   }
 
