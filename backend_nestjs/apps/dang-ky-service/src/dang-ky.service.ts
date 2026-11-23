@@ -282,47 +282,70 @@ export class DangKyService {
     const chiTieu =
       dt.chiTieu ?? dt.ChiTieu ?? dt.soLuongToiDa ?? dt.SoLuongToiDa;
 
-    await this.dataSource.transaction(async (m) => {
-      // Bảo đảm có dòng khóa (bỏ qua nếu đã có), rồi khóa nó
-      await m.query(
-        'INSERT IGNORE INTO ChiTieuDeTai (MaDeTai, SoDaDuyet) VALUES (?, 0)',
-        [dk.maDeTai],
-      );
-      await m.findOne(ChiTieuDeTai, {
-        where: { maDeTai: dk.maDeTai },
-        lock: { mode: 'pessimistic_write' },
-      });
+    // Tạo dòng khóa NGOÀI giao dịch: câu lệnh tự commit nên nhả khóa ngay,
+    // tránh hai giao dịch cùng giữ khóa chia sẻ rồi cùng xin khóa ghi (deadlock)
+    await this.dataSource.query(
+      'INSERT IGNORE INTO ChiTieuDeTai (MaDeTai, SoDaDuyet) VALUES (?, 0)',
+      [dk.maDeTai],
+    );
 
-      // Đếm SAU khi giữ khóa: số đếm này là nguồn sự thật, không dùng SoDaDuyet cũ
-      const daDuyet = await m.count(DangKy, {
-        where: { maDeTai: dk.maDeTai, trangThai: TrangThaiDangKy.DA_DUYET },
-      });
-      if (chiTieu != null && daDuyet >= Number(chiTieu)) {
-        throw new ConflictException({
-          statusCode: 409,
-          code: 'HET_CHI_TIEU',
-          message: 'Đề tài đã đủ số lượng sinh viên',
-        });
-      }
+    for (let lan = 1; ; lan++) {
+      try {
+        await this.dataSource.transaction(async (m) => {
+          // Khóa dòng chỉ tiêu; người đến sau chờ ở đây
+          await m.findOne(ChiTieuDeTai, {
+            where: { maDeTai: dk.maDeTai },
+            lock: { mode: 'pessimistic_write' },
+          });
 
-      const kq = await m.update(
-        DangKy,
-        { maDangKy: id, trangThai: TrangThaiDangKy.CHO_DUYET },
-        { trangThai: TrangThaiDangKy.DA_DUYET },
-      );
-      if (!kq.affected) {
-        throw new ConflictException({
-          statusCode: 409,
-          code: 'TRANG_THAI_KHONG_HOP_LE',
-          message: 'Chỉ duyệt được đăng ký đang chờ duyệt',
+          // Đếm SAU khi giữ khóa: đây là nguồn sự thật, không dùng SoDaDuyet cũ
+          const daDuyet = await m.count(DangKy, {
+            where: {
+              maDeTai: dk.maDeTai,
+              trangThai: TrangThaiDangKy.DA_DUYET,
+            },
+          });
+          if (chiTieu != null && daDuyet >= Number(chiTieu)) {
+            throw new ConflictException({
+              statusCode: 409,
+              code: 'HET_CHI_TIEU',
+              message: 'Đề tài đã đủ số lượng sinh viên',
+            });
+          }
+
+          const kq = await m.update(
+            DangKy,
+            { maDangKy: id, trangThai: TrangThaiDangKy.CHO_DUYET },
+            { trangThai: TrangThaiDangKy.DA_DUYET },
+          );
+          if (!kq.affected) {
+            throw new ConflictException({
+              statusCode: 409,
+              code: 'TRANG_THAI_KHONG_HOP_LE',
+              message: 'Chỉ duyệt được đăng ký đang chờ duyệt',
+            });
+          }
+          await m.update(
+            ChiTieuDeTai,
+            { maDeTai: dk.maDeTai },
+            { soDaDuyet: daDuyet + 1 },
+          );
         });
+        break;
+      } catch (e: any) {
+        const code = e?.code ?? e?.driverError?.code;
+        // Deadlock là lỗi tạm thời của CSDL: thử lại, quá 3 lần thì báo bận
+        if (code === 'ER_LOCK_DEADLOCK' && lan < 3) continue;
+        if (code === 'ER_LOCK_DEADLOCK') {
+          throw new ServiceUnavailableException({
+            statusCode: 503,
+            code: 'HE_THONG_BAN',
+            message: 'Hệ thống đang bận, hãy thử lại',
+          });
+        }
+        throw e;
       }
-      await m.update(
-        ChiTieuDeTai,
-        { maDeTai: dk.maDeTai },
-        { soDaDuyet: daDuyet + 1 },
-      );
-    });
+    }
     // B7 sẽ phát EV-07 (DangKyDuocDuyet) tại đây khi có libs/events
     return await this.findOne(id);
   }
