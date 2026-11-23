@@ -160,8 +160,17 @@ export class AuthService implements OnModuleInit {
     if (!tk || tk.trangThai !== 'HOAT_DONG') {
       throw new UnauthorizedException('Tài khoản không còn hoạt động');
     }
-    row.daThuHoi = true; // xoay vòng: token cũ vô hiệu ngay
-    await this.rtRepo.save(row);
+    // Xoay vòng: token cũ vô hiệu ngay. Cập nhật có điều kiện để hai yêu cầu
+    // làm mới đồng thời bằng cùng một token chỉ có một yêu cầu thành công.
+    const dung = await this.rtRepo.update(
+      { id: row.id, daThuHoi: false },
+      { daThuHoi: true },
+    );
+    if (!dung.affected) {
+      throw new UnauthorizedException(
+        'Refresh token đã bị thu hồi, hãy đăng nhập lại',
+      );
+    }
     return this.issueTokens(tk);
   }
 

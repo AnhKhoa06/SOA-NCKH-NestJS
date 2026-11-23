@@ -116,6 +116,11 @@ export class TaiKhoanService {
     };
   }
 
+  // Thông tin tài khoản của chính người đang đăng nhập
+  async toi(id: number) {
+    return this.an(await this.tim(id));
+  }
+
   async khoa(id: number, nguoiThaoTac: number) {
     if (id === nguoiThaoTac) {
       throw new BadRequestException('Không thể tự khóa tài khoản của mình');

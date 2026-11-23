@@ -20,7 +20,7 @@ interface Rule {
 const READ = ['GET', 'HEAD'];
 const rules: Rule[] = [
   // Tài khoản
-  { pattern: /^\/tai-khoan\/me\/mat-khau$/, roles: ALL },
+  { pattern: /^\/tai-khoan\/me(\/mat-khau)?$/, roles: ALL },
   { pattern: /^\/tai-khoan(\/|$)/, roles: ['QTV'] },
   // Nhật ký: chỉ QTV
   { pattern: /^\/nhat-ky(\/|$)/, roles: ['QTV'] },
@@ -36,7 +36,7 @@ const rules: Rule[] = [
   },
   // Đề tài
   { pattern: /^\/de-tai\/[^/]+\/(duyet|tu-choi|dong|mo)$/, roles: ['QTV'] },
-  { pattern: /^\/de-tai\/[^/]+\/ho-so$/, roles: ALL },
+  { pattern: /^\/de-tai\/[^/]+\/ho-so$/, roles: ['GV', 'SV'] },
   { methods: READ, pattern: /^\/de-tai(\/|$)/, roles: ALL },
   { pattern: /^\/de-tai(\/|$)/, roles: ['GV', 'QTV'] },
   // Đăng ký
@@ -52,6 +52,7 @@ const rules: Rule[] = [
   // Báo cáo
   { pattern: /^\/bao-cao\/sinh-vien(\/|$)/, roles: ['QTV'] },
   { pattern: /^\/bao-cao\/gio-nckh(\/|$)/, roles: ['GV', 'QTV'] },
+  { pattern: /^\/bao-cao\/xuat(\/|$)/, roles: ['GV', 'QTV'] },
   // AI
   { pattern: /^\/ai\/(goi-y-hoi-dong|nap-kho)(\/|$)/, roles: ['QTV'] },
   { pattern: /^\/ai(\/|$)/, roles: ['GV', 'QTV'] },
@@ -212,11 +213,21 @@ async function bootstrap() {
       );
     }
 
+    // Token cũ từ trước khi có phân quyền (vai trò "admin"...) không còn hợp lệ
+    if (!payload.role || !ALL.includes(payload.role)) {
+      return sendError(
+        res,
+        401,
+        'Unauthorized',
+        'Phiên đăng nhập cũ, vui lòng đăng nhập lại',
+      );
+    }
+
     const rule = rules.find(
       (r) =>
         r.pattern.test(path) && (!r.methods || r.methods.includes(req.method)),
     );
-    if (rule && (!payload.role || !rule.roles.includes(payload.role))) {
+    if (rule && !rule.roles.includes(payload.role)) {
       return sendError(
         res,
         403,

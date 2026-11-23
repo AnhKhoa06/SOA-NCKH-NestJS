@@ -49,6 +49,9 @@ function Topbar({ user, onLogout, unread = 0 }) {
 
           {open && (
             <div className="topbar-menu">
+              <Link to="/ho-so-ca-nhan">
+                <UserRound size={16} /> Hồ sơ cá nhân
+              </Link>
               <Link to="/doi-mat-khau">
                 <KeyRound size={16} /> Đổi mật khẩu
               </Link>

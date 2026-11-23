@@ -1,4 +1,10 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 
 const ToastContext = createContext(null);
@@ -12,10 +18,16 @@ export function ToastProvider({ children }) {
     setTimeout(() => setItems((list) => list.filter((t) => t.id !== id)), 3500);
   }, []);
 
-  const toast = {
-    success: (m) => show("success", m),
-    error: (m) => show("error", m),
-  };
+  // Phải giữ nguyên tham chiếu: các trang đặt `toast` trong mảng phụ thuộc của
+  // useCallback/useEffect, nếu mỗi lần render tạo object mới thì trang sẽ tải lại
+  // vô hạn khi có lỗi (mỗi toast làm render lại -> tải lại -> lỗi -> toast...).
+  const toast = useMemo(
+    () => ({
+      success: (m) => show("success", m),
+      error: (m) => show("error", m),
+    }),
+    [show],
+  );
 
   return (
     <ToastContext.Provider value={toast}>

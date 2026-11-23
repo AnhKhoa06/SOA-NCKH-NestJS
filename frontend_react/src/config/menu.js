@@ -116,6 +116,7 @@ export const MENU_BY_ROLE = {
 const EXTRA_TITLES = {
   "/thong-bao": "Thông báo",
   "/doi-mat-khau": "Đổi mật khẩu",
+  "/ho-so-ca-nhan": "Hồ sơ cá nhân",
 };
 
 export function findTitle(pathname, role) {

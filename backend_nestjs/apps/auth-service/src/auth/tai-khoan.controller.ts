@@ -38,6 +38,13 @@ export class TaiKhoanController {
     return this.svc.danhSach(Number(page), Number(size), vaiTro, q);
   }
 
+  // Mọi vai trò xem được tài khoản của chính mình (khai báo trước các route có :id)
+  @Roles('QTV', 'GV', 'SV')
+  @Get('me')
+  toi(@CurrentUser('sub') sub: string) {
+    return this.svc.toi(Number(sub));
+  }
+
   // Mọi vai trò đều đổi được mật khẩu của chính mình
   @Roles('QTV', 'GV', 'SV')
   @HttpCode(200)

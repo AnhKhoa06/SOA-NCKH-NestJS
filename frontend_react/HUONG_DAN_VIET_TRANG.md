@@ -8,22 +8,24 @@ Muốn thêm một trang mới (ngoài các trang có sẵn): nhắn Khoa thêm 
 
 ## Trang nào của ai
 
-| Trang                                | File                                                     | Người làm                    |
-| ------------------------------------ | -------------------------------------------------------- | ---------------------------- |
-| Tổng quan                            | `TongQuan.jsx`                                           | Huy                          |
-| Khoa, Ngành, Giảng viên              | `Khoa.jsx`, `Nganh.jsx`, `GiangVien.jsx`                 | Khương                       |
-| Sinh viên                            | `SinhVien.jsx`                                           | Khương                       |
-| Đợt đề tài                           | `DotDeTai.jsx`                                           | Khang                        |
-| Đề tài                               | `DeTai.jsx`                                              | Khang                        |
-| Đăng ký                              | `DangKy.jsx`                                             | Khoa                         |
-| Hội đồng nghiệm thu                  | `HoiDong.jsx`                                            | Khương                       |
-| Thống kê đề tài, sinh viên, Giờ NCKH | `ThongKeDeTai.jsx`, `ThongKeSinhVien.jsx`, `GioNckh.jsx` | Huy                          |
-| Thông báo, Nhật ký                   | `ThongBao.jsx`, `NhatKy.jsx`                             | Lịch                         |
-| Tài khoản, Đổi mật khẩu              | `TaiKhoan.jsx`, `DoiMatKhau.jsx`                         | Khoa (đã xong, dùng làm mẫu) |
+| Trang                                | File                                                     | Người làm                                        |
+| ------------------------------------ | -------------------------------------------------------- | ------------------------------------------------ |
+| Tổng quan                            | `TongQuan.jsx`                                           | Huy                                              |
+| Khoa, Ngành, Giảng viên              | `Khoa.jsx`, `Nganh.jsx`, `GiangVien.jsx`                 | Khương                                           |
+| Sinh viên                            | `SinhVien.jsx`                                           | Khương                                           |
+| Đợt đề tài                           | `DotDeTai.jsx`                                           | Khang                                            |
+| Đề tài                               | `DeTai.jsx`                                              | Khang                                            |
+| Đăng ký                              | `DangKy.jsx`                                             | Khoa                                             |
+| Hội đồng nghiệm thu                  | `HoiDong.jsx`                                            | Khương                                           |
+| Thống kê đề tài, sinh viên, Giờ NCKH | `ThongKeDeTai.jsx`, `ThongKeSinhVien.jsx`, `GioNckh.jsx` | Huy                                              |
+| Thông báo, Nhật ký                   | `ThongBao.jsx`, `NhatKy.jsx`                             | Lịch                                             |
+| Tài khoản, Đổi mật khẩu              | `TaiKhoan.jsx`, `DoiMatKhau.jsx`                         | Khoa (đã xong, dùng làm mẫu)                     |
+| Hồ sơ cá nhân                        | `HoSoCaNhan.jsx` (+ `HoSoCaNhan.css`)                    | Khoa (đã xong); Khương bổ sung họ tên, khoa, lớp |
+| Đổi mật khẩu                         | `DoiMatKhau.jsx` (+ `DoiMatKhau.css`)                    | Khoa (đã xong)                                   |
 
 ## Vai trò và đăng nhập
 
-- Ba vai trò: `QTV`, `GV`, `SV`. Tài khoản thử: `admin` (QTV), `gv01` (GV001), `sv01` (SV001). Mật khẩu `gv01` và `sv01`: `Test@12345`.
+- Ba vai trò: `QTV`, `GV`, `SV`. Tài khoản thử: `admin` (QTV), `gv01` (GV001), `sv01` (SV001). Mật khẩu `gv01` và `sv01`: `Test@12345`. Mật khẩu `admin`: `admin123`
 - Lấy thông tin người đang đăng nhập: `auth.getUser()` (từ `api.js`) trả `{ username, role, maDinhDanh }`.
 - Một trang có thể được nhiều vai trò vào (ví dụ Đề tài). Hãy ẩn hoặc hiện nút theo `auth.getUser().role`, nhưng backend mới là nơi kiểm tra quyền thật.
 
@@ -33,7 +35,8 @@ Muốn thêm một trang mới (ngoài các trang có sẵn): nhắn Khoa thêm 
 - `useToast()` (components/Toast): toast.success(msg), toast.error(msg)
 - `Modal` (components/Modal): props open, title, onClose, children, footer
 - `ConfirmDialog` (components/ConfirmDialog): props open, message, loading, onConfirm, onCancel
-- Xem `pages/TaiKhoan.jsx` làm mẫu: bảng, phân trang, tìm kiếm, popup thêm, xác nhận khóa.
+- Mẫu bảng và popup: `pages/TaiKhoan.jsx`.
+- Mẫu trang dạng thẻ thông tin hoặc biểu mẫu: `pages/HoSoCaNhan.jsx` và `pages/DoiMatKhau.jsx`
 
 ## Quy ước giao diện
 
@@ -49,6 +52,14 @@ Muốn thêm một trang mới (ngoài các trang có sẵn): nhắn Khoa thêm 
 
 - JSON dùng camelCase; trạng thái là mã viết hoa không dấu (`CHO_DUYET`, `DANG_MO`...), giao diện tự đổi sang tiếng Việt.
 - Đường dẫn API đầy đủ và mã lỗi: xem `phancong.md` mục 3 và mục của mình.
+
+## Hai lỗi hay gặp khi viết trang
+
+**1. Trang tải lại liên tục rồi báo 429 "Quá nhiều yêu cầu".**
+Nguyên nhân thường gặp: đặt object hoặc hàm tạo mới mỗi lần render vào mảng phụ thuộc của `useEffect` hoặc `useCallback`, và trang đó có toast lỗi. `toast` từ `useToast()` đã được giữ ổn định nên dùng trong mảng phụ thuộc được. Gateway chỉ cho 100 yêu cầu mỗi phút mỗi IP, vòng lặp sẽ chạm giới hạn rất nhanh. Cách kiểm tra: mở DevTools, thấy cùng một yêu cầu lặp lại là đang có vòng lặp.
+
+**2. Sinh viên, giảng viên bị 403 "Không đủ quyền truy cập".**
+Mỗi vai trò chỉ gọi được một số API (bảng luật ở đầu `backend_nestjs/apps/api-gateway/src/main.ts`). Trang dùng chung cho nhiều vai trò phải gọi API theo vai trò: ví dụ SV không gọi được `GET /tai-khoan` hay `POST /de-tai`, nên mã sinh viên lấy từ `auth.getUser().maDinhDanh` thay vì tra cả danh sách., nên mã sinh viên lấy từ `auth.getUser().maDinhDanh` thay vì tra cả danh sách. Cần mở thêm quyền thì nhắn Khoa, đừng tự sửa Gateway.
 
 ## Mã lỗi HTTP có thể gặp
 

@@ -14,6 +14,7 @@ import TaiKhoan from "../pages/TaiKhoan";
 import NhatKy from "../pages/NhatKy";
 import ThongBao from "../pages/ThongBao";
 import DoiMatKhau from "../pages/DoiMatKhau";
+import HoSoCaNhan from "../pages/HoSoCaNhan";
 
 const ALL = ["QTV", "GV", "SV"];
 
@@ -34,5 +35,6 @@ export const ROUTES = [
   { path: "/tai-khoan", element: <TaiKhoan />, roles: ["QTV"] },
   { path: "/nhat-ky", element: <NhatKy />, roles: ["QTV"] },
   { path: "/thong-bao", element: <ThongBao />, roles: ALL },
+  { path: "/ho-so-ca-nhan", element: <HoSoCaNhan />, roles: ALL },
   { path: "/doi-mat-khau", element: <DoiMatKhau />, roles: ALL },
 ];

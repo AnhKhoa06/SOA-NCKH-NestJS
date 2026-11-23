@@ -1,0 +1,195 @@
+.mk-wrap {
+  max-width: 720px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.mk-cover {
+  height: 56px;
+  background: #e0ecff;
+}
+
+.mk-icon {
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.mk-body {
+  padding: 12px 28px 28px;
+}
+
+.mk-title {
+  margin: 0 0 20px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mk-sub {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.mk-field {
+  margin-bottom: 18px;
+}
+
+.mk-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+.mk-input {
+  position: relative;
+}
+
+.mk-input input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 44px 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14px;
+  outline: none;
+}
+
+.mk-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.mk-input input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* Nút hiện/ẩn mật khẩu: thêm .content để thắng CSS chung `.content button` */
+.content .mk-eye {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent !important;
+  color: #64748b !important;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.content .mk-eye:hover {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+}
+
+.content .mk-eye svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mk-strength {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.mk-strength span {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: #e2e8f0;
+}
+
+.mk-strength.s1 span:nth-child(-n + 1) {
+  background: #ef4444;
+}
+.mk-strength.s2 span:nth-child(-n + 2) {
+  background: #f59e0b;
+}
+.mk-strength.s3 span:nth-child(-n + 3) {
+  background: #3b82f6;
+}
+.mk-strength.s4 span:nth-child(-n + 4) {
+  background: #22c55e;
+}
+
+.mk-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.mk-hint.error {
+  color: #b91c1c;
+}
+
+.mk-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.mk-cancel {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mk-cancel:hover {
+  background: #f8fafc;
+}
+
+.content .mk-submit {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.content .mk-submit:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.content .mk-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
