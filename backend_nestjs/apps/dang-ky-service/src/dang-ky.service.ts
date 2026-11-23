@@ -6,12 +6,13 @@ import {
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
 import { DangKy } from './dang-ky.entity';
 import { CreateDangKyDto } from './dto/create-dang-ky.dto';
 import { UpdateDangKyDto } from './dto/update-dang-ky.dto';
 import { ConfigService } from '@nestjs/config';
+import { TRANG_THAI_CON_HIEU_LUC } from './trang-thai-dang-ky';
 
 @Injectable()
 export class DangKyService {
@@ -51,6 +52,24 @@ export class DangKyService {
     }
   }
 
+  // Ghi vào CSDL; ràng buộc UNIQUE (MaSV, HieuLuc) là chốt chặn cuối cho BR-05
+  // kể cả khi hai yêu cầu đến cùng lúc
+  private async luu(dk: DangKy): Promise<DangKy> {
+    try {
+      return await this.repo.save(dk);
+    } catch (e: any) {
+      const code = e?.code ?? e?.driverError?.code;
+      if (code === 'ER_DUP_ENTRY') {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'DA_CO_DANG_KY',
+          message: 'Sinh viên đã đăng ký một đề tài',
+        });
+      }
+      throw e;
+    }
+  }
+
   private async checkDeTai(maDeTai: number, auth?: string, ignoreId?: number) {
     const deTai = await this.callService(
       `${this.deTaiUrl}/${maDeTai}`,
@@ -59,7 +78,7 @@ export class DangKyService {
     );
     const toiDa = deTai.soLuongToiDa ?? deTai.SoLuongToiDa ?? 1;
     const daDangKy = await this.repo.count({
-      where: { maDeTai, trangThai: Not('Tu choi') },
+      where: { maDeTai, trangThai: In(TRANG_THAI_CON_HIEU_LUC) },
     });
     const tru = ignoreId ? 1 : 0;
     if (daDangKy - tru >= toiDa) {
@@ -74,11 +93,17 @@ export class DangKyService {
       auth,
     );
     const daCo = await this.repo.findOne({
-      where: { maSV: dto.maSV, trangThai: Not('Tu choi') },
+      where: { maSV: dto.maSV, trangThai: In(TRANG_THAI_CON_HIEU_LUC) },
     });
-    if (daCo) throw new ConflictException('Sinh viên đã đăng ký một đề tài');
+    if (daCo) {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'DA_CO_DANG_KY',
+        message: 'Sinh viên đã đăng ký một đề tài',
+      });
+    }
     await this.checkDeTai(dto.maDeTai, auth);
-    return await this.repo.save(this.repo.create(dto));
+    return await this.luu(this.repo.create(dto));
   }
 
   async findAll(): Promise<DangKy[]> {
@@ -101,7 +126,7 @@ export class DangKyService {
       await this.checkDeTai(dto.maDeTai, auth, id);
     }
     Object.assign(dk, dto);
-    return await this.repo.save(dk);
+    return await this.luu(dk);
   }
 
   async remove(id: number): Promise<{ message: string }> {

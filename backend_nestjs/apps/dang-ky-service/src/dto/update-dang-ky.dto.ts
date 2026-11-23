@@ -1,4 +1,5 @@
-import { IsIn, IsInt, IsOptional } from 'class-validator';
+import { IsEnum, IsInt, IsOptional } from 'class-validator';
+import { TrangThaiDangKy } from '../trang-thai-dang-ky';
 
 export class UpdateDangKyDto {
   @IsOptional()
@@ -6,6 +7,6 @@ export class UpdateDangKyDto {
   maDeTai?: number;
 
   @IsOptional()
-  @IsIn(['Cho duyet', 'Da duyet', 'Tu choi'])
-  trangThai?: string;
+  @IsEnum(TrangThaiDangKy)
+  trangThai?: TrangThaiDangKy;
 }

@@ -214,7 +214,7 @@ Khung giao diện đã có sẵn: đăng nhập, sidebar và menu theo vai trò 
 
 Hiện trạng: tạo, sửa, xóa đăng ký cơ bản, trạng thái là chuỗi `Cho duyet`, chưa duyệt đúng quy tắc, chưa khóa chỉ tiêu.
 
-- [ ] **B1. Chuẩn hóa dữ liệu:** trạng thái `CHO_DUYET`/`DA_DUYET`/`BI_TU_CHOI`/`DA_HUY`, cột `hieuLuc`, `lyDoTuChoi`; ràng buộc **mỗi sinh viên tối đa một đăng ký còn hiệu lực** (BR-05, dùng ràng buộc duy nhất của CSDL, không chỉ kiểm tra trong mã); bảng `ChiTieuDeTai` (dòng khóa dùng khi duyệt).
+- [x] **B1. Chuẩn hóa dữ liệu:** trạng thái `CHO_DUYET`/`DA_DUYET`/`BI_TU_CHOI`/`DA_HUY`, cột `hieuLuc`, `lyDoTuChoi`; ràng buộc **mỗi sinh viên tối đa một đăng ký còn hiệu lực** (BR-05, dùng ràng buộc duy nhất của CSDL, không chỉ kiểm tra trong mã); bảng `ChiTieuDeTai` (dòng khóa dùng khi duyệt).
 - [ ] **B2. Kiểm tra điều kiện (FR-11):** đề tài `DANG_MO` (BR-01), cùng ngành (BR-02), GPA đủ (BR-03), chưa đủ chỉ tiêu (BR-04), chưa có đăng ký còn hiệu lực (BR-05), còn trong hạn đợt (BR-18). Lấy dữ liệu bằng HTTP từ Academic và Topic, **chuyển tiếp `Authorization`**. Trả `DETAI_KHONG_MO`, `SAI_NGANH`, `GPA_KHONG_DAT` (422); `HET_CHI_TIEU`, `DA_CO_DANG_KY` (409); `NGOAI_HAN` (422).
 - [ ] **B3. `POST /dang-ky` (SV):** mã sinh viên lấy từ token; ghi `CHO_DUYET`; phát EV-06; trả kết quả ngay, không chờ thông báo. (FR-10)
 - [ ] **B4. `PATCH /dang-ky/:id/huy` (SV):** chỉ đăng ký của mình, chỉ khi `CHO_DUYET` (BR-06); phát EV-09. (FR-12)
