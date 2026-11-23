@@ -27,6 +27,16 @@ Tài liệu này dành cho **cả nhóm** và cho **AI trợ lý** mà mỗi b�
 
 ---
 
+### Chuẩn bị máy (làm một lần sau khi kéo `main`)
+
+1. `git checkout main` rồi `git pull`.
+2. Chạy `backend_nestjs/apps/auth-service/database.sql` trong MySQL Workbench (tạo CSDL `qldatn_auth`).
+3. Chạy `backend_nestjs/apps/dang-ky-service/migrations/01-chuan-hoa-dang-ky.sql` nếu máy đã có CSDL `qldatn_dangky` từ trước (máy mới chỉ cần `database.sql`).
+4. Tạo `apps/auth-service/.env` từ `.env.example`, đảm bảo có `DB_NAME=qldatn_auth`. Với Gateway, thêm các biến mới trong `apps/api-gateway/.env.example` vào `.env`.
+5. Chạy `npm install` trong `backend_nestjs` và trong `frontend_react`.
+6. Khởi động lại Auth Service và Gateway. Lần đầu Auth tự tạo 3 tài khoản thử (mục 3.3).
+7. Đăng xuất và đăng nhập lại trên giao diện (phiên cũ vai trò `admin` bị từ chối).
+
 ## 1. Tổng quan phân công
 
 | Người                  | Dịch vụ / mảng chính                                                                                                    | Cổng                             | CSDL                                                 | Yêu cầu (FR)                                   | Khối lượng                            |
@@ -156,6 +166,7 @@ TypeORM đang để `synchronize: false`, nên **không tự tạo bảng**. M�
 ### 3.9 Git
 
 - Mỗi đầu việc một nhánh: `feature/<ten>/<viec-ngan>` (ví dụ `feature/khang/trang-thai-de-tai`). Mở Pull Request vào `main`, Khoa xem trước khi gộp. Không đẩy thẳng vào `main`.
+- Riêng nhóm trưởng được commit thẳng vào `main` cho phần nền tảng (`libs/`, Gateway, Auth, frontend dùng chung). Thành viên vẫn làm nhánh riêng và mở Pull Request.
 - Không đẩy `node_modules/` và `.env`.
 - Tên commit ngắn, bắt đầu bằng tên dịch vụ: `de-tai: them duyet de tai`.
 

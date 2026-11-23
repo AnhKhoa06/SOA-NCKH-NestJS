@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,7 +13,7 @@ import { DangKy } from './dang-ky.entity';
 import { CreateDangKyDto } from './dto/create-dang-ky.dto';
 import { UpdateDangKyDto } from './dto/update-dang-ky.dto';
 import { ConfigService } from '@nestjs/config';
-import { TRANG_THAI_CON_HIEU_LUC } from './trang-thai-dang-ky';
+import { TRANG_THAI_CON_HIEU_LUC, TrangThaiDangKy } from './trang-thai-dang-ky';
 
 @Injectable()
 export class DangKyService {
@@ -27,11 +28,11 @@ export class DangKyService {
   ) {
     this.sinhVienUrl = config.get<string>(
       'SINHVIEN_URL',
-      'http://localhost:3000/sinh-vien',
+      'http://localhost:3001/sinh-vien',
     );
     this.deTaiUrl = config.get<string>(
       'DETAI_URL',
-      'http://localhost:3000/de-tai',
+      'http://localhost:3002/de-tai',
     );
   }
 
@@ -70,39 +71,106 @@ export class DangKyService {
     }
   }
 
-  private async checkDeTai(maDeTai: number, auth?: string, ignoreId?: number) {
-    const deTai = await this.callService(
+  // Lỗi nghiệp vụ 422 (không đạt điều kiện), có mã lỗi theo SRS bảng 35
+  private khongDat(code: string, message: string) {
+    return new UnprocessableEntityException({
+      statusCode: 422,
+      code,
+      message,
+    });
+  }
+
+  /**
+   * FR-11: kiểm tra điều kiện đăng ký (BR-01 đến BR-05, BR-18).
+   * Dữ liệu lấy bằng HTTP từ Academic và Topic, chuyển tiếp Authorization.
+   * Hợp đồng JSON: sinh viên { maNganh, gpa, trangThai }; đề tài { trangThai,
+   * maNganh, gpaYeuCau, chiTieu, ngayMoDangKy, ngayDongDangKy } (phancong.md, Khang A0).
+   * Khi dịch vụ kia CHƯA trả một trường thì bỏ qua đúng điều kiện cần trường đó,
+   * để chạy được trong lúc Academic và Topic chưa làm xong.
+   * boQuaId: id đăng ký đang sửa (không tính vào các đếm).
+   */
+  private async kiemTraDieuKien(
+    maSV: string,
+    maDeTai: number,
+    auth?: string,
+    boQuaId?: number,
+  ) {
+    const sv = await this.callService(
+      `${this.sinhVienUrl}/${maSV}`,
+      `Không tìm thấy sinh viên ${maSV}`,
+      auth,
+    );
+    const dt = await this.callService(
       `${this.deTaiUrl}/${maDeTai}`,
       `Không tìm thấy đề tài ${maDeTai}`,
       auth,
     );
-    const toiDa = deTai.soLuongToiDa ?? deTai.SoLuongToiDa ?? 1;
-    const daDangKy = await this.repo.count({
-      where: { maDeTai, trangThai: In(TRANG_THAI_CON_HIEU_LUC) },
-    });
-    const tru = ignoreId ? 1 : 0;
-    if (daDangKy - tru >= toiDa) {
-      throw new ConflictException('Đề tài đã đủ số lượng sinh viên');
-    }
-  }
 
-  async create(dto: CreateDangKyDto, auth?: string): Promise<DangKy> {
-    await this.callService(
-      `${this.sinhVienUrl}/${dto.maSV}`,
-      `Không tìm thấy sinh viên ${dto.maSV}`,
-      auth,
-    );
-    const daCo = await this.repo.findOne({
-      where: { maSV: dto.maSV, trangThai: In(TRANG_THAI_CON_HIEU_LUC) },
+    // BR-01: đề tài phải đang mở
+    if (dt.trangThai !== undefined && dt.trangThai !== 'DANG_MO') {
+      throw this.khongDat('DETAI_KHONG_MO', 'Đề tài hiện không mở đăng ký');
+    }
+
+    // BR-02: cùng ngành
+    const nganhSV = sv.maNganh ?? sv.MaNganh;
+    const nganhDT = dt.maNganh ?? dt.MaNganh;
+    if (nganhSV && nganhDT && nganhSV !== nganhDT) {
+      throw this.khongDat('SAI_NGANH', 'Đề tài không thuộc ngành của bạn');
+    }
+
+    // BR-03: GPA đủ yêu cầu
+    const gpa = sv.gpa ?? sv.GPA;
+    const gpaYeuCau = dt.gpaYeuCau ?? dt.GpaYeuCau;
+    if (gpa != null && gpaYeuCau != null && Number(gpa) < Number(gpaYeuCau)) {
+      throw this.khongDat(
+        'GPA_KHONG_DAT',
+        `GPA ${gpa} chưa đạt mức yêu cầu ${gpaYeuCau}`,
+      );
+    }
+
+    // BR-18: còn trong hạn đăng ký của đợt
+    const bayGio = Date.now();
+    const mo = dt.ngayMoDangKy ? Date.parse(dt.ngayMoDangKy) : NaN;
+    const dong = dt.ngayDongDangKy ? Date.parse(dt.ngayDongDangKy) : NaN;
+    if (
+      (!Number.isNaN(mo) && bayGio < mo) ||
+      (!Number.isNaN(dong) && bayGio > dong)
+    ) {
+      throw this.khongDat('NGOAI_HAN', 'Ngoài thời hạn đăng ký của đợt');
+    }
+
+    // BR-05: mỗi sinh viên một đăng ký còn hiệu lực (chốt chặn cuối là UNIQUE trong CSDL)
+    const daCo = await this.repo.find({
+      where: { maSV, trangThai: In(TRANG_THAI_CON_HIEU_LUC) },
     });
-    if (daCo) {
+    if (daCo.some((d) => d.maDangKy !== boQuaId)) {
       throw new ConflictException({
         statusCode: 409,
         code: 'DA_CO_DANG_KY',
         message: 'Sinh viên đã đăng ký một đề tài',
       });
     }
-    await this.checkDeTai(dto.maDeTai, auth);
+
+    // BR-04: chưa đủ chỉ tiêu. Chỉ đăng ký ĐÃ DUYỆT chiếm chỗ; đăng ký chờ duyệt
+    // thì giảng viên quyết định. Việc khóa dòng chỉ tiêu khi duyệt làm ở B5.
+    const chiTieu =
+      dt.chiTieu ?? dt.ChiTieu ?? dt.soLuongToiDa ?? dt.SoLuongToiDa;
+    if (chiTieu != null) {
+      const daDuyet = await this.repo.count({
+        where: { maDeTai, trangThai: TrangThaiDangKy.DA_DUYET },
+      });
+      if (daDuyet >= Number(chiTieu)) {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'HET_CHI_TIEU',
+          message: 'Đề tài đã đủ số lượng sinh viên',
+        });
+      }
+    }
+  }
+
+  async create(dto: CreateDangKyDto, auth?: string): Promise<DangKy> {
+    await this.kiemTraDieuKien(dto.maSV, dto.maDeTai, auth);
     return await this.luu(this.repo.create(dto));
   }
 
@@ -123,7 +191,7 @@ export class DangKyService {
   ): Promise<DangKy> {
     const dk = await this.findOne(id);
     if (dto.maDeTai && dto.maDeTai !== dk.maDeTai) {
-      await this.checkDeTai(dto.maDeTai, auth, id);
+      await this.kiemTraDieuKien(dk.maSV, dto.maDeTai, auth, id);
     }
     Object.assign(dk, dto);
     return await this.luu(dk);
