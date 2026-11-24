@@ -334,7 +334,7 @@ Hiện trạng: `DeTai` chỉ có tên, mô tả, giảng viên hướng dẫn (
 
 **Được sửa:** `apps/notification-service/**` (tạo mới bằng Nest CLI; hỏi Khoa để thêm vào `nest-cli.json`), trang giao diện của mình.
 
-- [ ] **A1. Khung dịch vụ:** dựng `apps/notification-service` giống các dịch vụ khác (`main.ts`, `.env.example`, `database.sql`, cổng 3005, JWT guard từ `libs/common`). CSDL `qldatn_thongbao`: `ThongBao` (người nhận, loại, tiêu đề, nội dung, đã đọc, `MaSuKien` duy nhất), `NhatKy` (chỉ thêm), `LichNhac`, `SuKienDaXuLy`.
+- [x] **A1. Khung dịch vụ:** dựng `apps/notification-service` giống các dịch vụ khác (`main.ts`, `.env.example`, `database.sql`, cổng 3005, JWT guard từ `libs/common`). CSDL `qldatn_thongbao`: `ThongBao` (người nhận, loại, tiêu đề, nội dung, đã đọc, `MaSuKien` duy nhất), `NhatKy` (chỉ thêm), `LichNhac`, `SuKienDaXuLy`.
 - [ ] **A2. Script phát sự kiện giả** `apps/notification-service/scripts/` để thử mà không cần chờ các dịch vụ khác (dùng thư viện của Khoa).
 - [ ] **B1. Nhận sự kiện và tạo thông báo (FR-15):** nghe `q.notification` với các khóa ở mục 5; **idempotent theo `eventId`** (không tạo trùng); xử lý bất đồng bộ.
   - `DangKyDuocTao` → giảng viên của đề tài.
