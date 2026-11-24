@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommonModule } from '@app/common';
+import { ThongBao } from './thong-bao/thong-bao.entity';
+import { ThongBaoController } from './thong-bao/thong-bao.controller';
+import { ThongBaoService } from './thong-bao/thong-bao.service';
 
 @Module({
   imports: [
@@ -22,7 +25,10 @@ import { CommonModule } from '@app/common';
         synchronize: false,
       }),
     }),
+    TypeOrmModule.forFeature([ThongBao]),
     CommonModule,
   ],
+  controllers: [ThongBaoController],
+  providers: [ThongBaoService],
 })
 export class NotificationServiceModule {}
