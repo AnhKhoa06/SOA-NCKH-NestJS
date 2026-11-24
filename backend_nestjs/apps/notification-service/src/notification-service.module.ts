@@ -5,6 +5,9 @@ import { CommonModule } from '@app/common';
 import { ThongBao } from './thong-bao/thong-bao.entity';
 import { ThongBaoController } from './thong-bao/thong-bao.controller';
 import { ThongBaoService } from './thong-bao/thong-bao.service';
+import { NhatKy } from './nhat-ky/nhat-ky.entity';
+import { NhatKyController } from './nhat-ky/nhat-ky.controller';
+import { NhatKyService } from './nhat-ky/nhat-ky.service';
 
 @Module({
   imports: [
@@ -25,10 +28,10 @@ import { ThongBaoService } from './thong-bao/thong-bao.service';
         synchronize: false,
       }),
     }),
-    TypeOrmModule.forFeature([ThongBao]),
+    TypeOrmModule.forFeature([ThongBao, NhatKy]),
     CommonModule,
   ],
-  controllers: [ThongBaoController],
-  providers: [ThongBaoService],
+  controllers: [ThongBaoController, NhatKyController],
+  providers: [ThongBaoService, NhatKyService],
 })
 export class NotificationServiceModule {}
