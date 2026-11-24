@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, IsNull, Repository } from 'typeorm';
+import { FindOptionsWhere, In, IsNull, Repository } from 'typeorm';
 import type { CurrentUserPayload } from '@app/common';
 import { ThongBao } from './thong-bao.entity';
 
@@ -42,7 +42,13 @@ export class ThongBaoService {
       skip: (p - 1) * s,
       take: s,
     });
-    return { data, total, page: p, size: s };
+    return {
+      data,
+      page: p,
+      size: s,
+      total,
+      totalPages: Math.ceil(total / s),
+    };
   }
 
   async demChuaDoc(user: CurrentUserPayload) {
@@ -64,5 +70,19 @@ export class ThongBaoService {
       await this.repo.save(tb);
     }
     return { idThongBao: id, daDoc: true };
+  }
+
+  async danhDauTatCaDaDoc(user: CurrentUserPayload) {
+    const chuaDoc = await this.repo.find({
+      where: this.dieuKien(user, { daDoc: false }),
+      select: { idThongBao: true },
+    });
+    if (chuaDoc.length > 0) {
+      await this.repo.update(
+        { idThongBao: In(chuaDoc.map((x) => x.idThongBao)) },
+        { daDoc: true },
+      );
+    }
+    return { soLuong: chuaDoc.length };
   }
 }
