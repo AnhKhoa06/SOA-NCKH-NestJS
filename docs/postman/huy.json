@@ -1,0 +1,189 @@
+{
+  "info": {
+    "name": "Huy - Report Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base", "value": "http://localhost:3000" },
+    { "key": "token_admin", "value": "" },
+    { "key": "token_gv", "value": "" },
+    { "key": "token_sv", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Đăng nhập QTV (admin)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const j = pm.response.json();",
+              "pm.collectionVariables.set('token_admin', j.access_token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"Admin\",\"password\":\"admin123\"}"
+        },
+        "url": "{{base}}/auth/login"
+      }
+    },
+    {
+      "name": "2. Đăng nhập Giảng viên (gv01)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const j = pm.response.json();",
+              "pm.collectionVariables.set('token_gv', j.access_token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"gv01\",\"password\":\"Test@12345\"}"
+        },
+        "url": "{{base}}/auth/login"
+      }
+    },
+    {
+      "name": "3. Đăng nhập Sinh viên (sv01)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const j = pm.response.json();",
+              "pm.collectionVariables.set('token_sv', j.access_token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"sv01\",\"password\":\"Test@12345\"}"
+        },
+        "url": "{{base}}/auth/login"
+      }
+    },
+    {
+      "name": "4. Tổng quan - QTV (FR-16)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token_admin}}" }],
+        "url": "{{base}}/bao-cao/tong-quan"
+      }
+    },
+    {
+      "name": "5. Tổng quan - Giảng viên (FR-16)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token_gv}}" }],
+        "url": "{{base}}/bao-cao/tong-quan"
+      }
+    },
+    {
+      "name": "6. Tổng quan - Sinh viên (FR-16)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token_sv}}" }],
+        "url": "{{base}}/bao-cao/tong-quan"
+      }
+    },
+    {
+      "name": "7. Thống kê đề tài - QTV (FR-17)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token_admin}}" }],
+        "url": "{{base}}/bao-cao/de-tai?page=1&size=10"
+      }
+    },
+    {
+      "name": "8. Thống kê đề tài - Giảng viên (FR-17)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token_gv}}" }],
+        "url": "{{base}}/bao-cao/de-tai"
+      }
+    },
+    {
+      "name": "9. Thống kê sinh viên - QTV (FR-18)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token_admin}}" }],
+        "url": "{{base}}/bao-cao/sinh-vien?page=1&size=10"
+      }
+    },
+    {
+      "name": "10. Thống kê sinh viên - GV (Mong đợi: 403 Forbidden)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token_gv}}" }],
+        "url": "{{base}}/bao-cao/sinh-vien"
+      }
+    },
+    {
+      "name": "11. Quy đổi giờ NCKH - Giảng viên (FR-31)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token_gv}}" }],
+        "url": "{{base}}/bao-cao/gio-nckh?namHoc=2025-2026"
+      }
+    },
+    {
+      "name": "12. Quy đổi giờ NCKH - QTV xem toàn trường (FR-31)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token_admin}}" }],
+        "url": "{{base}}/bao-cao/gio-nckh"
+      }
+    },
+    {
+      "name": "13. Xuất báo cáo đề tài - JSON (FR-19)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token_admin}}" }],
+        "url": "{{base}}/bao-cao/xuat?loai=de-tai&dinhDang=json"
+      }
+    },
+    {
+      "name": "14. Xuất danh sách sinh viên chưa đăng ký - CSV (FR-19)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token_admin}}" }],
+        "url": "{{base}}/bao-cao/xuat?loai=sinh-vien-chua-dang-ky&dinhDang=csv"
+      }
+    },
+    {
+      "name": "15. Gửi sự kiện cập nhật bản sao đọc (Idempotent)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token_admin}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"eventId\": \"evt-test-001\",\n  \"eventType\": \"SinhVienThayDoi\",\n  \"version\": 1,\n  \"occurredAt\": \"2026-11-24T12:00:00Z\",\n  \"producer\": \"academic-service\",\n  \"data\": {\n    \"maSV\": \"SV999\",\n    \"hoTen\": \"Sinh Viên Thử Nghiệm\",\n    \"lop\": \"K46D-CNTT\",\n    \"maNganh\": \"CNTT\",\n    \"gpa\": 3.65,\n    \"trangThai\": \"HOAT_DONG\"\n  }\n}"
+        },
+        "url": "{{base}}/bao-cao/su-kien"
+      }
+    }
+  ]
+}

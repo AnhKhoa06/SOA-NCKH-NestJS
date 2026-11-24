@@ -1,0 +1,71 @@
+CREATE DATABASE IF NOT EXISTS qldatn_baocao
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE qldatn_baocao;
+
+-- Bản sao đọc của SinhVien (dựng từ EV-01)
+CREATE TABLE IF NOT EXISTS SinhVienBanSao (
+  MaSV VARCHAR(20) PRIMARY KEY,
+  HoTen VARCHAR(255) NULL,
+  Lop VARCHAR(50) NULL,
+  MaNganh VARCHAR(20) NULL,
+  GPA DECIMAL(3,2) NULL,
+  TrangThai VARCHAR(50) NOT NULL DEFAULT 'HOAT_DONG',
+  NgayCapNhat DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_nganh_lop (MaNganh, Lop)
+);
+
+-- Bản sao đọc của DeTai (dựng từ EV-02, EV-03, EV-05)
+CREATE TABLE IF NOT EXISTS DeTaiBanSao (
+  MaDeTai INT PRIMARY KEY,
+  TenDeTai VARCHAR(255) NOT NULL,
+  MaGV VARCHAR(20) NULL,
+  MaNganh VARCHAR(20) NULL,
+  ChiTieu INT NOT NULL DEFAULT 1,
+  SoDaDuyet INT NOT NULL DEFAULT 0,
+  TrangThai VARCHAR(50) NOT NULL DEFAULT 'CHO_DUYET',
+  NgayCapNhat DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_gv_trangthai (MaGV, TrangThai),
+  KEY idx_nganh (MaNganh)
+);
+
+-- Bản sao đọc của DangKy (dựng từ EV-06 -> EV-09)
+CREATE TABLE IF NOT EXISTS DangKyBanSao (
+  MaDangKy INT PRIMARY KEY,
+  MaSV VARCHAR(20) NOT NULL,
+  MaDeTai INT NOT NULL,
+  TrangThai VARCHAR(50) NOT NULL DEFAULT 'CHO_DUYET',
+  NgayDangKy DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  NgayCapNhat DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_sv (MaSV),
+  KEY idx_detai (MaDeTai),
+  KEY idx_trangthai (TrangThai)
+);
+
+-- Bản sao đọc kết quả nghiệm thu (dựng từ EV-16)
+CREATE TABLE IF NOT EXISTS KetQuaNghiemThuBanSao (
+  MaDeTai INT PRIMARY KEY,
+  MaGV VARCHAR(20) NOT NULL,
+  KetLuan VARCHAR(20) NOT NULL,
+  DiemTB DECIMAL(4,2) NOT NULL,
+  NamHoc VARCHAR(20) NULL,
+  NgayNghiemThu DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_magv_ketluan (MaGV, KetLuan)
+);
+
+-- Bản sao đọc tham gia hội đồng (dựng từ EV-15)
+CREATE TABLE IF NOT EXISTS ThamGiaHoiDongBanSao (
+  MaHoiDong INT NOT NULL,
+  MaGV VARCHAR(20) NOT NULL,
+  VaiTro VARCHAR(50) NOT NULL,
+  NgayHop DATETIME NOT NULL,
+  NamHoc VARCHAR(20) NULL,
+  PRIMARY KEY (MaHoiDong, MaGV),
+  KEY idx_magv_ngayhop (MaGV, NgayHop)
+);
+
+-- Bảng kiểm soát tính duy nhất của sự kiện (Idempotency)
+CREATE TABLE IF NOT EXISTS SuKienDaXuLy (
+  EventId VARCHAR(36) PRIMARY KEY,
+  EventType VARCHAR(50) NOT NULL,
+  NgayXuLy DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

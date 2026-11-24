@@ -358,16 +358,16 @@ Hiện trạng: `DeTai` chỉ có tên, mô tả, giảng viên hướng dẫn (
 
 Nguyên tắc: Report **không truy vấn trực tiếp** CSDL của dịch vụ khác, mà giữ **bản sao đọc** dựng từ sự kiện (SRS 7.3.7).
 
-- [ ] **A1. Khung dịch vụ:** dựng `apps/report-service` (cổng 3006, `.env.example`, `database.sql`, JWT guard). CSDL `qldatn_baocao` với `SinhVienBanSao`, `DeTaiBanSao`, `DangKyBanSao`, `KetQuaNghiemThuBanSao`, `ThamGiaHoiDongBanSao`, `SuKienDaXuLy`.
-- [ ] **A2. Script phát sự kiện giả** để thử khi các dịch vụ khác chưa phát (dùng thư viện của Khoa, giống Lịch).
-- [ ] **B1. Dựng bản sao đọc:** nghe `q.report` với các khóa ở mục 5 (EV-01, 02, 03, 05, 06, 07, 08, 09, 15, 16); idempotent theo `eventId`; bỏ qua sự kiện cũ hơn trạng thái đã có.
-- [ ] **B2. Trang tổng quan (FR-16):** `GET /bao-cao/tong-quan` theo vai trò: QTV (số sinh viên, giảng viên, đề tài và đăng ký theo trạng thái), GV (số đề tài của mình, số đăng ký chờ duyệt), SV (trạng thái đăng ký của mình, số đề tài đang mở đúng ngành). Chưa có dữ liệu thì trả chỉ số bằng 0.
-- [ ] **B3. Thống kê đề tài (FR-17, QTV và GV):** `GET /bao-cao/de-tai`; tỷ lệ lấp đầy = số đã duyệt / chỉ tiêu theo đề tài, ngành, giảng viên; danh sách đề tài chưa có sinh viên; **GV chỉ thấy đề tài mình**; không có dữ liệu trả danh sách rỗng.
-- [ ] **B4. Thống kê sinh viên (FR-18, QTV):** `GET /bao-cao/sinh-vien`; đã đăng ký (có đăng ký `CHO_DUYET` hoặc `DA_DUYET`) và chưa đăng ký theo ngành, lớp; kèm danh sách sinh viên chưa đăng ký để nhắc.
-- [ ] **B5. Tên ngành, số giảng viên:** gọi Academic khi cần (SRS 7.3.7); lỗi thì hiển thị theo mã.
-- [ ] **C1. Xuất báo cáo (FR-19, ưu tiên thấp):** `GET /bao-cao/xuat?loai=&dinhDang=xlsx|pdf` (loại: đề tài, đăng ký, sinh viên chưa đăng ký, thống kê); tối đa `EXPORT_MAX_ROWS` (5.000) dòng (413 nếu vượt, yêu cầu thu hẹp bộ lọc); định dạng khác 400; nội dung theo đúng quyền xem của người yêu cầu. (Gateway chỉ cho GV và QTV gọi `/bao-cao/xuat`.)
-- [ ] **D1. Quy đổi giờ NCKH (FR-31, ưu tiên thấp, Giai đoạn 3):** `GET /bao-cao/gio-nckh?namHoc=&maGV=`; chỉ tính đề tài `DA_NGHIEM_THU` có kết luận **Đạt**; giờ = số đề tài hướng dẫn × `HOURS_GUIDE` + số lần tham gia hội đồng × `HOURS_COUNCIL` (P-22: 30 giờ và 3 giờ, thay bằng quy định của trường khi có, OI-08); GV chỉ xem của mình (403); xuất được Excel; chưa có dữ liệu nghiệm thu thì bằng 0.
-- [ ] **E1. Frontend:** trang tổng quan (`TongQuan.jsx`, mở đầu theo vai trò), thống kê có biểu đồ, xuất báo cáo, giờ NCKH. Trang Xuất báo cáo chưa có trong menu: nhắn Khoa thêm.
+- [x] **A1. Khung dịch vụ:** dựng `apps/report-service` (cổng 3006, `.env.example`, `database.sql`, JWT guard). CSDL `qldatn_baocao` với `SinhVienBanSao`, `DeTaiBanSao`, `DangKyBanSao`, `KetQuaNghiemThuBanSao`, `ThamGiaHoiDongBanSao`, `SuKienDaXuLy`.
+- [x] **A2. Script phát sự kiện giả** để thử khi các dịch vụ khác chưa phát (dùng thư viện của Khoa, giống Lịch).
+- [x] **B1. Dựng bản sao đọc:** nghe `q.report` với các khóa ở mục 5 (EV-01, 02, 03, 05, 06, 07, 08, 09, 15, 16); idempotent theo `eventId`; bỏ qua sự kiện cũ hơn trạng thái đã có.
+- [x] **B2. Trang tổng quan (FR-16):** `GET /bao-cao/tong-quan` theo vai trò: QTV (số sinh viên, giảng viên, đề tài và đăng ký theo trạng thái), GV (số đề tài của mình, số đăng ký chờ duyệt), SV (trạng thái đăng ký của mình, số đề tài đang mở đúng ngành). Chưa có dữ liệu thì trả chỉ số bằng 0.
+- [x] **B3. Thống kê đề tài (FR-17, QTV và GV):** `GET /bao-cao/de-tai`; tỷ lệ lấp đầy = số đã duyệt / chỉ tiêu theo đề tài, ngành, giảng viên; danh sách đề tài chưa có sinh viên; **GV chỉ thấy đề tài mình**; không có dữ liệu trả danh sách rỗng.
+- [x] **B4. Thống kê sinh viên (FR-18, QTV):** `GET /bao-cao/sinh-vien`; đã đăng ký (có đăng ký `CHO_DUYET` hoặc `DA_DUYET`) và chưa đăng ký theo ngành, lớp; kèm danh sách sinh viên chưa đăng ký để nhắc.
+- [x] **B5. Tên ngành, số giảng viên:** gọi Academic khi cần (SRS 7.3.7); lỗi thì hiển thị theo mã.
+- [x] **C1. Xuất báo cáo (FR-19, ưu tiên thấp):** `GET /bao-cao/xuat?loai=&dinhDang=xlsx|pdf` (loại: đề tài, đăng ký, sinh viên chưa đăng ký, thống kê); tối đa `EXPORT_MAX_ROWS` (5.000) dòng (413 nếu vượt, yêu cầu thu hẹp bộ lọc); định dạng khác 400; nội dung theo đúng quyền xem của người yêu cầu. (Gateway chỉ cho GV và QTV gọi `/bao-cao/xuat`.)
+- [x] **D1. Quy đổi giờ NCKH (FR-31, ưu tiên thấp, Giai đoạn 3):** `GET /bao-cao/gio-nckh?namHoc=&maGV=`; chỉ tính đề tài `DA_NGHIEM_THU` có kết luận **Đạt**; giờ = số đề tài hướng dẫn × `HOURS_GUIDE` + số lần tham gia hội đồng × `HOURS_COUNCIL` (P-22: 30 giờ và 3 giờ, thay bằng quy định của trường khi có, OI-08); GV chỉ xem của mình (403); xuất được Excel; chưa có dữ liệu nghiệm thu thì bằng 0.
+- [x] **E1. Frontend:** trang tổng quan (`TongQuan.jsx`, mở đầu theo vai trò), thống kê có biểu đồ, xuất báo cáo, giờ NCKH. Trang Xuất báo cáo chưa có trong menu: nhắn Khoa thêm.
 
 ---
 
