@@ -1,0 +1,84 @@
+{
+  "info": {
+    "name": "Lich - Notification Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base", "value": "http://localhost:3000" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Dang nhap gv01",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const j = pm.response.json();",
+              "pm.collectionVariables.set('token', j.access_token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"gv01\",\"password\":\"Test@12345\"}"
+        },
+        "url": "{{base}}/auth/login"
+      }
+    },
+    {
+      "name": "Danh sach thong bao",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{base}}/thong-bao?page=1&size=10"
+      }
+    },
+    {
+      "name": "Danh sach thong bao chua doc",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{base}}/thong-bao?chuaDoc=true"
+      }
+    },
+    {
+      "name": "So luong chua doc",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{base}}/thong-bao/so-luong-chua-doc"
+      }
+    },
+    {
+      "name": "Danh dau da doc (doi id)",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{base}}/thong-bao/1/da-doc"
+      }
+    },
+    {
+      "name": "Danh dau tat ca da doc",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{base}}/thong-bao/da-doc-tat-ca"
+      }
+    },
+    {
+      "name": "Nhat ky (GV bi 403)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{base}}/nhat-ky"
+      }
+    }
+  ]
+}
