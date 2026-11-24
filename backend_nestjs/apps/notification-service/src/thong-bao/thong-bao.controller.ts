@@ -33,6 +33,12 @@ export class ThongBaoController {
   }
 
   @HttpCode(200)
+  @Patch('da-doc-tat-ca')
+  danhDauTatCa(@CurrentUser() user: CurrentUserPayload) {
+    return this.svc.danhDauTatCaDaDoc(user);
+  }
+
+  @HttpCode(200)
   @Patch(':id/da-doc')
   danhDauDaDoc(
     @CurrentUser() user: CurrentUserPayload,

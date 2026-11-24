@@ -344,7 +344,7 @@ Hiện trạng: `DeTai` chỉ có tên, mô tả, giảng viên hướng dẫn (
   - `KetQuaKiemTraTrung` mức `CAO` → quản trị viên.
   - `TrangThaiTaiKhoanThayDoi` → chủ tài khoản.
   - `HoiDongDuocLap`, `KetQuaNghiemThu`, `HoSoDuocNop` → người liên quan.
-- [ ] **B2. Hộp thư (FR-15):** `GET /thong-bao` (của mình, lọc chưa đọc, phân trang), `PATCH /thong-bao/:id/da-doc`, `PATCH /thong-bao/da-doc-tat-ca`. Người dùng chỉ thấy thông báo của mình (lấy `maDinhDanh` và `role` từ token).
+- [x] **B2. Hộp thư (FR-15):** `GET /thong-bao` (của mình, lọc chưa đọc, phân trang), `PATCH /thong-bao/:id/da-doc`, `PATCH /thong-bao/da-doc-tat-ca`. Người dùng chỉ thấy thông báo của mình (lấy `maDinhDanh` và `role` từ token).
 - [ ] **B3. Email:** gửi thêm email khi có cấu hình SMTP (`nodemailer`); gửi thất bại thử lại theo chính sách, **thông báo trong hộp thư vẫn được giữ**.
 - [ ] **C1. Nhật ký hoạt động (FR-23):** nhận **EV-11** từ mọi dịch vụ; mỗi bản ghi có thời điểm, người thực hiện, vai trò, hành động, đối tượng, kết quả, IP; **chỉ thêm, không sửa, không xóa** (BR-16, không có API sửa xóa); `GET /nhat-ky` (chỉ QTV, 403 nếu khác) lọc theo thời gian, người dùng, hành động, phân trang.
 - [ ] **D1. Nhắc hạn tự động (FR-30), làm ở Giai đoạn 3:** từ **EV-14** tạo lịch nhắc cho hạn nộp báo cáo (GV và SV của đề tài `DANG_THUC_HIEN`); từ **EV-15** tạo lịch nhắc họp (thành viên hội đồng và GV hướng dẫn); bộ lập lịch quét **mỗi giờ**, gửi ở mốc `REMIND_DAYS` (trước 3 ngày và 1 ngày); nhận **EV-17** thì hủy lịch nhắc tương ứng; mỗi mốc và mỗi người **chỉ nhắc một lần** (BR-24); mốc của đợt đổi thì lịch chưa gửi bị hủy và tạo lại.
