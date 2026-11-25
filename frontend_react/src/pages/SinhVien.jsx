@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { api } from "../api";
 import { useToast } from "../components/Toast";
@@ -7,95 +7,122 @@ import ConfirmDialog from "../components/ConfirmDialog";
 
 export default function SinhVien() {
   const toast = useToast();
-
   const [list, setList] = useState([]);
+  const [nganhOptions, setNganhOptions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // State cho modal thêm/sửa
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState(null); // null = thêm mới, có giá trị = đang sửa
+  const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
     MaSV: "",
     hoTen: "",
     email: "",
     lop: "",
-    password: "",
+    maNganh: "",
+    gpa: "",
   });
   const [saving, setSaving] = useState(false);
 
-  // State cho confirm xóa
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // ===== Tải danh sách =====
-  const fetchList = async () => {
+  const fetchList = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.get("/sinh-vien");
-      setList(Array.isArray(data) ? data : []);
+      const params = new URLSearchParams({
+        page: String(page),
+        size: "10",
+      });
+      if (search.trim()) params.set("q", search.trim());
+
+      const res = await api.get(`/sinh-vien?${params.toString()}`);
+      const pages = Math.max(res.totalPages || 0, 1);
+      setList(res.data ?? []);
+      setTotalPages(pages);
+      if (page > pages) setPage(pages);
     } catch (e) {
       toast.error(e.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search, toast]);
+
+  const fetchNganhOptions = useCallback(async () => {
+    try {
+      const res = await api.get("/nganh?size=100");
+      setNganhOptions(res.data ?? []);
+    } catch (e) {
+      toast.error(`Không tải được danh sách ngành: ${e.message}`);
+    }
+  }, [toast]);
 
   useEffect(() => {
     fetchList();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchList]);
 
-  // ===== Mở modal thêm =====
+  useEffect(() => {
+    fetchNganhOptions();
+  }, [fetchNganhOptions]);
+
   const openAdd = () => {
     setEditing(null);
-    setForm({ MaSV: "", hoTen: "", email: "", lop: "", password: "" });
-    setModalOpen(true);
-  };
-
-  // ===== Mở modal sửa =====
-  const openEdit = (sv) => {
-    setEditing(sv);
     setForm({
-      MaSV: sv.MaSV || "",
-      hoTen: sv.hoTen || "",
-      email: sv.email || "",
-      lop: sv.lop || "",
-      password: "", // không hiển thị password cũ
+      MaSV: "",
+      hoTen: "",
+      email: "",
+      lop: "",
+      maNganh: nganhOptions[0]?.maNganh ?? "",
+      gpa: "",
     });
     setModalOpen(true);
   };
 
-  // ===== Lưu (thêm hoặc sửa) =====
+  const openEdit = (sv) => {
+    setEditing(sv);
+    setForm({
+      MaSV: sv.MaSV,
+      hoTen: sv.hoTen ?? "",
+      email: sv.email ?? "",
+      lop: sv.lop ?? "",
+      maNganh: sv.maNganh ?? "",
+      gpa: sv.gpa == null ? "" : String(sv.gpa),
+    });
+    setModalOpen(true);
+  };
+
   const handleSave = async () => {
-    // Validate
-    if (!form.MaSV.trim()) {
-      toast.error("Mã sinh viên không được để trống");
+    const MaSV = form.MaSV.trim();
+    const hoTen = form.hoTen.trim();
+    if (!MaSV || !hoTen) {
+      toast.error("Vui lòng nhập Mã SV và Họ tên");
       return;
     }
-    if (!form.hoTen.trim()) {
-      toast.error("Họ tên không được để trống");
+
+    const gpa = form.gpa.trim() ? Number(form.gpa) : null;
+    if (gpa !== null && (!Number.isFinite(gpa) || gpa < 0 || gpa > 4)) {
+      toast.error("GPA phải là số từ 0 đến 4");
       return;
     }
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      toast.error("Email không đúng định dạng");
-      return;
-    }
+
+    const data = {
+      hoTen,
+      email: form.email.trim() || null,
+      lop: form.lop.trim() || null,
+      maNganh: form.maNganh || null,
+      gpa,
+    };
 
     setSaving(true);
     try {
       if (editing) {
-        // Sửa: PATCH /sinh-vien/:MaSV, không gửi MaSV
-        const body = {
-          hoTen: form.hoTen,
-          email: form.email,
-          lop: form.lop,
-        };
-        if (form.password.trim()) body.password = form.password;
-        await api.patch(`/sinh-vien/${editing.MaSV}`, body);
+        await api.patch(`/sinh-vien/${editing.MaSV}`, data);
         toast.success("Cập nhật sinh viên thành công");
       } else {
-        // Thêm mới: POST /sinh-vien
-        await api.post("/sinh-vien", form);
+        await api.post("/sinh-vien", { MaSV, ...data });
         toast.success("Thêm sinh viên thành công");
       }
       setModalOpen(false);
@@ -107,7 +134,6 @@ export default function SinhVien() {
     }
   };
 
-  // ===== Xóa =====
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -126,59 +152,103 @@ export default function SinhVien() {
   return (
     <div>
       <div className="page-header">
-        <h2>Quản lý sinh viên</h2>
+        <h2>Quản lý Sinh viên</h2>
         <button onClick={openAdd}>
           <Plus size={16} /> Thêm sinh viên
         </button>
       </div>
 
       <div className="card">
+        <div style={{ marginBottom: 16 }}>
+          <input
+            placeholder="Tìm theo mã hoặc tên sinh viên..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            style={{ maxWidth: 300, padding: 8 }}
+          />
+        </div>
+
         {loading ? (
           <div className="loading-state">Đang tải dữ liệu...</div>
         ) : list.length === 0 ? (
-          <div className="empty-state">Chưa có sinh viên nào</div>
+          <div className="empty-state">Không có sinh viên nào</div>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Mã SV</th>
-                <th>Họ tên</th>
-                <th>Email</th>
-                <th>Lớp</th>
-                <th style={{ width: 140 }}>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((sv) => (
-                <tr key={sv.MaSV}>
-                  <td>{sv.MaSV}</td>
-                  <td>{sv.hoTen}</td>
-                  <td>{sv.email}</td>
-                  <td>{sv.lop}</td>
-                  <td>
-                    <div className="table-actions">
-                      <button className="btn-edit" onClick={() => openEdit(sv)}>
-                        <Pencil size={14} /> Sửa
-                      </button>
-                      <button
-                        className="btn-delete"
-                        onClick={() => setDeleteTarget(sv)}
-                      >
-                        <Trash2 size={14} /> Xóa
-                      </button>
-                    </div>
-                  </td>
+          <>
+            <table>
+              <thead>
+                <tr>
+                  <th>Mã SV</th>
+                  <th>Họ Tên</th>
+                  <th>Lớp</th>
+                  <th>Mã Ngành</th>
+                  <th>GPA</th>
+                  <th>Trạng thái</th>
+                  <th style={{ width: 140 }}>Thao tác</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {list.map((sv) => (
+                  <tr key={sv.MaSV}>
+                    <td>{sv.MaSV}</td>
+                    <td>{sv.hoTen}</td>
+                    <td>{sv.lop || "—"}</td>
+                    <td>{sv.maNganh || "—"}</td>
+                    <td>{sv.gpa ?? "—"}</td>
+                    <td>{sv.trangThai}</td>
+                    <td>
+                      <div className="table-actions">
+                        <button
+                          className="btn-edit"
+                          onClick={() => openEdit(sv)}
+                        >
+                          <Pencil size={14} /> Sửa
+                        </button>
+                        <button
+                          className="btn-delete"
+                          onClick={() => setDeleteTarget(sv)}
+                        >
+                          <Trash2 size={14} /> Xóa
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: 10,
+                marginTop: 20,
+              }}
+            >
+              <button
+                disabled={page === 1}
+                onClick={() => setPage((current) => current - 1)}
+              >
+                Trang trước
+              </button>
+              <span style={{ alignSelf: "center" }}>
+                Trang {page} / {totalPages}
+              </span>
+              <button
+                disabled={page === totalPages}
+                onClick={() => setPage((current) => current + 1)}
+              >
+                Trang sau
+              </button>
+            </div>
+          </>
         )}
       </div>
 
-      {/* Modal thêm/sửa */}
       <Modal
         open={modalOpen}
-        title={editing ? "Sửa sinh viên" : "Thêm sinh viên"}
+        title={editing ? "Sửa Sinh viên" : "Thêm Sinh viên"}
         onClose={() => setModalOpen(false)}
         footer={
           <>
@@ -196,20 +266,20 @@ export default function SinhVien() {
         }
       >
         <div className="form-group">
-          <label>Mã sinh viên *</label>
+          <label>Mã Sinh viên *</label>
           <input
             value={form.MaSV}
             onChange={(e) => setForm({ ...form, MaSV: e.target.value })}
-            disabled={!!editing}
-            placeholder="VD: 4651050123"
+            disabled={Boolean(editing)}
+            placeholder="VD: SV001"
           />
         </div>
         <div className="form-group">
-          <label>Họ tên *</label>
+          <label>Họ Tên *</label>
           <input
             value={form.hoTen}
             onChange={(e) => setForm({ ...form, hoTen: e.target.value })}
-            placeholder="Nguyễn Văn A"
+            placeholder="VD: Nguyễn Văn A"
           />
         </div>
         <div className="form-group">
@@ -218,7 +288,7 @@ export default function SinhVien() {
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            placeholder="a@example.com"
+            placeholder="sv@example.com"
           />
         </div>
         <div className="form-group">
@@ -226,23 +296,39 @@ export default function SinhVien() {
           <input
             value={form.lop}
             onChange={(e) => setForm({ ...form, lop: e.target.value })}
-            placeholder="VD: CNTT K46E"
+            placeholder="VD: K46D"
           />
         </div>
         <div className="form-group">
-          <label>{editing ? "Mật khẩu mới (bỏ trống nếu không đổi)" : "Mật khẩu"}</label>
+          <label>Thuộc Ngành</label>
+          <select
+            value={form.maNganh}
+            onChange={(e) => setForm({ ...form, maNganh: e.target.value })}
+          >
+            <option value="">-- Chọn Ngành --</option>
+            {nganhOptions.map((nganh) => (
+              <option key={nganh.maNganh} value={nganh.maNganh}>
+                {nganh.maNganh} - {nganh.tenNganh}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Điểm GPA (Hệ 4)</label>
           <input
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            placeholder="••••••"
+            type="number"
+            step="0.01"
+            min="0"
+            max="4"
+            value={form.gpa}
+            onChange={(e) => setForm({ ...form, gpa: e.target.value })}
+            placeholder="VD: 3.5"
           />
         </div>
       </Modal>
 
-      {/* Confirm xóa */}
       <ConfirmDialog
-        open={!!deleteTarget}
+        open={Boolean(deleteTarget)}
         message={`Bạn có chắc muốn xóa sinh viên "${deleteTarget?.hoTen}" (${deleteTarget?.MaSV})?`}
         loading={deleting}
         onConfirm={handleDelete}
