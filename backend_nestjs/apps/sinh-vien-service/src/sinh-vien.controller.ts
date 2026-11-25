@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   Delete,
   ForbiddenException,
@@ -8,8 +9,11 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser, Roles, RolesGuard } from '@app/common';
 import type { CurrentUserPayload } from '@app/common';
 import { SinhVienService } from './sinh-vien.service';
@@ -26,6 +30,27 @@ export class SinhVienController {
   @Post()
   create(@Body() data: CreateSinhVienDto) {
     return this.sinhVienService.create(data);
+  }
+
+  @Roles('QTV')
+  @Post('import')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+      fileFilter: (_request, file, callback) => {
+        if (!file.originalname.toLowerCase().endsWith('.xlsx')) {
+          callback(new BadRequestException('Chỉ chấp nhận file .xlsx'), false);
+          return;
+        }
+        callback(null, true);
+      },
+    }),
+  )
+  importExcel(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Vui lòng tải lên file Excel');
+    }
+    return this.sinhVienService.importFromExcel(file);
   }
 
   @Get()

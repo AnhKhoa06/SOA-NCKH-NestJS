@@ -6,7 +6,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import * as ExcelJS from 'exceljs';
 import type { CurrentUserPayload } from '@app/common';
 import { SinhVien } from './sinh-vien.entity';
 import { Nganh } from './nganh.entity';
@@ -42,6 +45,95 @@ export class SinhVienService {
     await this.kiemTraNganh(data.maNganh);
     const sinhVien = this.sinhVienRepository.create(data);
     return await this.sinhVienRepository.save(sinhVien);
+  }
+
+  async importFromExcel(file: Express.Multer.File) {
+    const workbook = new ExcelJS.Workbook();
+    try {
+      await workbook.xlsx.load(file.buffer);
+    } catch {
+      throw new BadRequestException('File không đúng định dạng Excel (.xlsx)');
+    }
+
+    const worksheet = workbook.getWorksheet(1);
+    if (!worksheet) {
+      throw new BadRequestException('File Excel trống');
+    }
+
+    const results = { success: 0, failed: 0, errors: [] as string[] };
+
+    for (let i = 2; i <= worksheet.rowCount; i++) {
+      const row = worksheet.getRow(i);
+      const values = Array.from({ length: 6 }, (_, index) =>
+        row.getCell(index + 1).text.trim(),
+      );
+      if (values.every((value) => !value)) continue;
+
+      const [maSV, hoTen, email, lop, maNganh, gpaText] = values;
+      if (!maSV || !hoTen) {
+        results.failed++;
+        results.errors.push(`Dòng ${i}: Thiếu Mã SV hoặc Họ tên`);
+        continue;
+      }
+
+      const data = plainToInstance(CreateSinhVienDto, {
+        MaSV: maSV,
+        hoTen,
+        email: email || undefined,
+        lop: lop || undefined,
+        maNganh: maNganh || undefined,
+        gpa: gpaText ? Number(gpaText) : undefined,
+      });
+      const validationErrors = await validate(data);
+      if (validationErrors.length > 0) {
+        const messages = validationErrors.flatMap((error) =>
+          Object.values(error.constraints ?? {}),
+        );
+        results.failed++;
+        results.errors.push(`Dòng ${i}: ${messages.join('; ')}`);
+        continue;
+      }
+
+      const existing = await this.sinhVienRepository.findOne({
+        where: { MaSV: maSV },
+      });
+      if (existing) {
+        results.failed++;
+        results.errors.push(`Dòng ${i}: Mã SV ${maSV} đã tồn tại`);
+        continue;
+      }
+
+      try {
+        await this.kiemTraNganh(data.maNganh);
+      } catch (error) {
+        if (!(error instanceof NotFoundException)) throw error;
+        results.failed++;
+        results.errors.push(`Dòng ${i}: ${error.message}`);
+        continue;
+      }
+
+      try {
+        await this.sinhVienRepository.save(
+          this.sinhVienRepository.create(data),
+        );
+        results.success++;
+      } catch (error) {
+        if (
+          error instanceof QueryFailedError &&
+          error.driverError.code === 'ER_DUP_ENTRY'
+        ) {
+          results.failed++;
+          results.errors.push(`Dòng ${i}: Mã SV ${maSV} đã tồn tại`);
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    return {
+      message: `Import hoàn tất: ${results.success} thành công, ${results.failed} thất bại`,
+      errors: results.errors,
+    };
   }
 
   async findAll(q: QuerySinhVienDto, user: CurrentUserPayload) {
