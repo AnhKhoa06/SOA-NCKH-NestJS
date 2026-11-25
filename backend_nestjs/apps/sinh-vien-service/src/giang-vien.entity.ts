@@ -1,19 +1,24 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Entity, PrimaryColumn, Column } from 'typeorm';
 
 @Entity('GiangVien')
 export class GiangVien {
-  @PrimaryColumn({ name: 'MaGV' })
+  @PrimaryColumn({ name: 'MaGV', type: 'varchar', length: 20 })
   maGV: string;
 
-  @Column({ name: 'HoTen' })
+  @Column({ name: 'HoTen', type: 'varchar', length: 255 })
   hoTen: string;
 
-  @Column({ name: 'Email', nullable: true })
+  @Column({ name: 'Email', type: 'varchar', length: 255, nullable: true })
   email: string;
 
-  @Column({ name: 'MaKhoa' })
+  @Column({ name: 'MaKhoa', type: 'varchar', length: 20 })
   maKhoa: string;
 
-  @Column({ name: 'TrangThai', default: 'HOAT_DONG' })
+  @Column({
+    name: 'TrangThai',
+    type: 'varchar',
+    length: 20,
+    default: 'HOAT_DONG',
+  })
   trangThai: string;
 }
