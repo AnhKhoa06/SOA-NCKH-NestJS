@@ -18,7 +18,7 @@ export default function SinhVien() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
-    MaSV: "",
+    maSV: "",
     hoTen: "",
     email: "",
     lop: "",
@@ -71,7 +71,7 @@ export default function SinhVien() {
   const openAdd = () => {
     setEditing(null);
     setForm({
-      MaSV: "",
+      maSV: "",
       hoTen: "",
       email: "",
       lop: "",
@@ -84,7 +84,7 @@ export default function SinhVien() {
   const openEdit = (sv) => {
     setEditing(sv);
     setForm({
-      MaSV: sv.MaSV,
+      maSV: sv.maSV,
       hoTen: sv.hoTen ?? "",
       email: sv.email ?? "",
       lop: sv.lop ?? "",
@@ -95,9 +95,9 @@ export default function SinhVien() {
   };
 
   const handleSave = async () => {
-    const MaSV = form.MaSV.trim();
+    const maSV = form.maSV.trim();
     const hoTen = form.hoTen.trim();
-    if (!MaSV || !hoTen) {
+    if (!maSV || !hoTen) {
       toast.error("Vui lòng nhập Mã SV và Họ tên");
       return;
     }
@@ -119,10 +119,10 @@ export default function SinhVien() {
     setSaving(true);
     try {
       if (editing) {
-        await api.patch(`/sinh-vien/${editing.MaSV}`, data);
+        await api.patch(`/sinh-vien/${editing.maSV}`, data);
         toast.success("Cập nhật sinh viên thành công");
       } else {
-        await api.post("/sinh-vien", { MaSV, ...data });
+        await api.post("/sinh-vien", { maSV, ...data });
         toast.success("Thêm sinh viên thành công");
       }
       setModalOpen(false);
@@ -138,7 +138,7 @@ export default function SinhVien() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await api.delete(`/sinh-vien/${deleteTarget.MaSV}`);
+      await api.delete(`/sinh-vien/${deleteTarget.maSV}`);
       toast.success("Xóa sinh viên thành công");
       setDeleteTarget(null);
       fetchList();
@@ -191,8 +191,8 @@ export default function SinhVien() {
               </thead>
               <tbody>
                 {list.map((sv) => (
-                  <tr key={sv.MaSV}>
-                    <td>{sv.MaSV}</td>
+                  <tr key={sv.maSV}>
+                    <td>{sv.maSV}</td>
                     <td>{sv.hoTen}</td>
                     <td>{sv.lop || "—"}</td>
                     <td>{sv.maNganh || "—"}</td>
@@ -268,8 +268,8 @@ export default function SinhVien() {
         <div className="form-group">
           <label>Mã Sinh viên *</label>
           <input
-            value={form.MaSV}
-            onChange={(e) => setForm({ ...form, MaSV: e.target.value })}
+            value={form.maSV}
+            onChange={(e) => setForm({ ...form, maSV: e.target.value })}
             disabled={Boolean(editing)}
             placeholder="VD: SV001"
           />
@@ -329,7 +329,7 @@ export default function SinhVien() {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        message={`Bạn có chắc muốn xóa sinh viên "${deleteTarget?.hoTen}" (${deleteTarget?.MaSV})?`}
+        message={`Bạn có chắc muốn xóa sinh viên "${deleteTarget?.hoTen}" (${deleteTarget?.maSV})?`}
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

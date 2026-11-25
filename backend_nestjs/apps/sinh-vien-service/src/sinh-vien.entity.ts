@@ -3,7 +3,7 @@ import { Entity, PrimaryColumn, Column } from 'typeorm';
 @Entity('SinhVien')
 export class SinhVien {
   @PrimaryColumn({ name: 'MaSV', type: 'varchar', length: 20 })
-  MaSV: string;
+  maSV: string;
 
   @Column({ name: 'HoTen', type: 'varchar', length: 255 })
   hoTen: string;
@@ -38,4 +38,8 @@ export class SinhVien {
     default: 'HOAT_DONG',
   })
   trangThai: string;
+
+  toJSON() {
+    return { ...this, MaSV: this.maSV };
+  }
 }
