@@ -3,6 +3,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommonModule } from '@app/common';
 import { SinhVienModule } from './sinh-vien.module';
+import { NganhModule } from './nganh.module';
+import { GiangVienModule } from './giang-vien.module';
+import { KhoaModule } from './khoa.module';
 
 @Module({
   imports: [
@@ -24,6 +27,9 @@ import { SinhVienModule } from './sinh-vien.module';
       }),
     }),
     SinhVienModule,
+    NganhModule,
+    GiangVienModule,
+    KhoaModule,
     CommonModule,
   ],
 })

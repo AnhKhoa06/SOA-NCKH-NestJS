@@ -1,10 +1,13 @@
 import {
   IsEmail,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
-  MinLength,
+  Max,
+  Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateSinhVienDto {
   @IsString()
@@ -23,7 +26,14 @@ export class CreateSinhVienDto {
   @IsString()
   lop?: string;
 
+  @IsOptional()
   @IsString()
-  @MinLength(6)
-  password: string;
+  maNganh?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(4)
+  gpa?: number;
 }
