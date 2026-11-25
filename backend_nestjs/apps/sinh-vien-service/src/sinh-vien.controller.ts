@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser, Roles, RolesGuard } from '@app/common';
@@ -14,6 +15,7 @@ import type { CurrentUserPayload } from '@app/common';
 import { SinhVienService } from './sinh-vien.service';
 import { CreateSinhVienDto } from './dto/create-sinh-vien.dto';
 import { UpdateSinhVienDto } from './dto/update-sinh-vien.dto';
+import { QuerySinhVienDto } from './dto/query-sinh-vien.dto';
 
 @UseGuards(RolesGuard)
 @Controller('sinh-vien')
@@ -26,10 +28,12 @@ export class SinhVienController {
     return this.sinhVienService.create(data);
   }
 
-  @Roles('QTV', 'GV')
   @Get()
-  findAll() {
-    return this.sinhVienService.findAll();
+  findAll(
+    @Query() q: QuerySinhVienDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.sinhVienService.findAll(q, user);
   }
 
   @Get(':MaSV')
