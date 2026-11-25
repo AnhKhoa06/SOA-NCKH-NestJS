@@ -2,46 +2,60 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
+import { CurrentUser, Roles, RolesGuard } from '@app/common';
+import type { CurrentUserPayload } from '@app/common';
 import { SinhVienService } from './sinh-vien.service';
 import { CreateSinhVienDto } from './dto/create-sinh-vien.dto';
 import { UpdateSinhVienDto } from './dto/update-sinh-vien.dto';
 
+@UseGuards(RolesGuard)
 @Controller('sinh-vien')
 export class SinhVienController {
   constructor(private readonly sinhVienService: SinhVienService) {}
 
-  // POST /sinh-vien - Thêm mới
+  @Roles('QTV')
   @Post()
-  async create(@Body() data: CreateSinhVienDto) {
-    return await this.sinhVienService.create(data);
+  create(@Body() data: CreateSinhVienDto) {
+    return this.sinhVienService.create(data);
   }
 
-  // GET /sinh-vien - Lấy tất cả
+  @Roles('QTV', 'GV')
   @Get()
-  async findAll() {
-    return await this.sinhVienService.findAll();
+  findAll() {
+    return this.sinhVienService.findAll();
   }
 
-  // GET /sinh-vien/:MaSV - Lấy 1
   @Get(':MaSV')
-  async findOne(@Param('MaSV') MaSV: string) {
-    return await this.sinhVienService.findOne(MaSV);
+  findOne(
+    @Param('MaSV') MaSV: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    if (user.role === 'SV' && user.maDinhDanh !== MaSV) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'KHONG_DU_QUYEN',
+        message: 'Chỉ được xem hồ sơ của chính mình',
+      });
+    }
+    return this.sinhVienService.findOne(MaSV);
   }
 
-  // PATCH /sinh-vien/:MaSV - Cập nhật
+  @Roles('QTV')
   @Patch(':MaSV')
-  async update(@Param('MaSV') MaSV: string, @Body() data: UpdateSinhVienDto) {
-    return await this.sinhVienService.update(MaSV, data);
+  update(@Param('MaSV') MaSV: string, @Body() data: UpdateSinhVienDto) {
+    return this.sinhVienService.update(MaSV, data);
   }
 
-  // DELETE /sinh-vien/:MaSV - Xóa
+  @Roles('QTV')
   @Delete(':MaSV')
-  async remove(@Param('MaSV') MaSV: string) {
-    return await this.sinhVienService.remove(MaSV);
+  remove(@Param('MaSV') MaSV: string) {
+    return this.sinhVienService.remove(MaSV);
   }
 }

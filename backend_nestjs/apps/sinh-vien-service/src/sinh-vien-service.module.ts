@@ -5,6 +5,7 @@ import { CommonModule } from '@app/common';
 import { SinhVienModule } from './sinh-vien.module';
 import { NganhModule } from './nganh.module';
 import { GiangVienModule } from './giang-vien.module';
+import { KhoaModule } from './khoa.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { GiangVienModule } from './giang-vien.module';
     SinhVienModule,
     NganhModule,
     GiangVienModule,
+    KhoaModule,
     CommonModule,
   ],
 })
