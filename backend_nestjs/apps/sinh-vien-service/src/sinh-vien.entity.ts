@@ -14,9 +14,23 @@ export class SinhVien {
   @Column({ name: 'Lop', nullable: true })
   lop: string;
 
-  @Column({ name: 'Password', nullable: true, select: false })
-  password: string;
+  @Column({ name: 'MaNganh', nullable: true })
+  maNganh: string | null;
 
-  @Column({ name: 'Token', nullable: true, select: false })
-  token: string;
+  @Column({
+    name: 'GPA',
+    type: 'decimal',
+    precision: 3,
+    scale: 2,
+    nullable: true,
+    transformer: {
+      to: (value: number | null) => value,
+      from: (value: string | null) =>
+        value === null || value === undefined ? null : parseFloat(value),
+    },
+  })
+  gpa: number | null;
+
+  @Column({ name: 'TrangThai', default: 'HOAT_DONG' })
+  trangThai: string;
 }

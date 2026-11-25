@@ -1,6 +1,36 @@
-import { PartialType, OmitType } from '@nestjs/mapped-types';
-import { CreateSinhVienDto } from './create-sinh-vien.dto';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
-export class UpdateSinhVienDto extends PartialType(
-  OmitType(CreateSinhVienDto, ['MaSV'] as const),
-) {}
+export class UpdateSinhVienDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  hoTen?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  lop?: string;
+
+  @IsOptional()
+  @IsString()
+  maNganh?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(4)
+  gpa?: number;
+}

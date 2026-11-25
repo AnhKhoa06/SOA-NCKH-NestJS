@@ -6,34 +6,38 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SinhVien } from './sinh-vien.entity';
+import { Nganh } from './nganh.entity';
 import { CreateSinhVienDto } from './dto/create-sinh-vien.dto';
 import { UpdateSinhVienDto } from './dto/update-sinh-vien.dto';
-import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class SinhVienService {
   constructor(
     @InjectRepository(SinhVien)
     private readonly sinhVienRepository: Repository<SinhVien>,
+    @InjectRepository(Nganh)
+    private readonly nganhRepository: Repository<Nganh>,
   ) {}
 
+  private async kiemTraNganh(maNganh?: string): Promise<void> {
+    if (!maNganh) return;
+    const nganh = await this.nganhRepository.findOne({ where: { maNganh } });
+    if (!nganh || nganh.trangThai !== 'HOAT_DONG') {
+      throw new NotFoundException(`Không tìm thấy ngành ${maNganh}`);
+    }
+  }
+
   // CREATE - Thêm sinh viên mới
-  async create(
-    data: CreateSinhVienDto,
-  ): Promise<Omit<SinhVien, 'password' | 'token'>> {
+  async create(data: CreateSinhVienDto): Promise<SinhVien> {
     const existingStudent = await this.sinhVienRepository.findOne({
       where: { MaSV: data.MaSV },
     });
     if (existingStudent) {
       throw new ConflictException('Mã sinh viên đã tồn tại');
     }
-    const sinhVien = this.sinhVienRepository.create({
-      ...data,
-      password: await bcrypt.hash(data.password, 10),
-    });
-    const { password, token, ...saved } =
-      await this.sinhVienRepository.save(sinhVien);
-    return saved;
+    await this.kiemTraNganh(data.maNganh);
+    const sinhVien = this.sinhVienRepository.create(data);
+    return await this.sinhVienRepository.save(sinhVien);
   }
 
   // READ ALL - Lấy tất cả sinh viên
@@ -57,13 +61,9 @@ export class SinhVienService {
   // UPDATE - Cập nhật thông tin sinh viên
   async update(MaSV: string, data: UpdateSinhVienDto): Promise<SinhVien> {
     const sinhVien = await this.findOne(MaSV);
-    const { password, ...rest } = data;
-    Object.assign(sinhVien, rest);
-    if (password) sinhVien.password = await bcrypt.hash(password, 10);
-    const saved = await this.sinhVienRepository.save(sinhVien);
-    delete (saved as any).password;
-    delete (saved as any).token;
-    return saved;
+    await this.kiemTraNganh(data.maNganh);
+    Object.assign(sinhVien, data);
+    return await this.sinhVienRepository.save(sinhVien);
   }
 
   // DELETE - Xóa sinh viên
