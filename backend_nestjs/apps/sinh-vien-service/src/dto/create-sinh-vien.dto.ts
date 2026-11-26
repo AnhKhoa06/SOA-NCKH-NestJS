@@ -10,9 +10,13 @@ import {
 import { Type } from 'class-transformer';
 
 export class CreateSinhVienDto {
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  MaSV: string;
+  maSV?: string;
+
+  @IsOptional()
+  @IsString()
+  MaSV?: string;
 
   @IsString()
   @IsNotEmpty()

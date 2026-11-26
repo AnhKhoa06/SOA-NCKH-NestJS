@@ -12,6 +12,14 @@ import { Type } from 'class-transformer';
 export class UpdateSinhVienDto {
   @IsOptional()
   @IsString()
+  maSV?: string;
+
+  @IsOptional()
+  @IsString()
+  MaSV?: string;
+
+  @IsOptional()
+  @IsString()
   @IsNotEmpty()
   hoTen?: string;
 

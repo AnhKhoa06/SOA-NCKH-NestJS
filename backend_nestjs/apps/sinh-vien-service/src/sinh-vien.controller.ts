@@ -61,30 +61,30 @@ export class SinhVienController {
     return this.sinhVienService.findAll(q, user);
   }
 
-  @Get(':MaSV')
+  @Get(':maSV')
   findOne(
-    @Param('MaSV') MaSV: string,
+    @Param('maSV') maSV: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    if (user.role === 'SV' && user.maDinhDanh !== MaSV) {
+    if (user.role === 'SV' && user.maDinhDanh !== maSV) {
       throw new ForbiddenException({
         statusCode: 403,
         code: 'KHONG_DU_QUYEN',
         message: 'Chỉ được xem hồ sơ của chính mình',
       });
     }
-    return this.sinhVienService.findOne(MaSV);
+    return this.sinhVienService.findOne(maSV);
   }
 
   @Roles('QTV')
-  @Patch(':MaSV')
-  update(@Param('MaSV') MaSV: string, @Body() data: UpdateSinhVienDto) {
-    return this.sinhVienService.update(MaSV, data);
+  @Patch(':maSV')
+  update(@Param('maSV') maSV: string, @Body() data: UpdateSinhVienDto) {
+    return this.sinhVienService.update(maSV, data);
   }
 
   @Roles('QTV')
-  @Delete(':MaSV')
-  remove(@Param('MaSV') MaSV: string) {
-    return this.sinhVienService.remove(MaSV);
+  @Delete(':maSV')
+  remove(@Param('maSV') maSV: string) {
+    return this.sinhVienService.remove(maSV);
   }
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DeTaiModule } from './de-tai.module';
+import { HoiDongModule } from './hoi-dong/hoi-dong.module';
 import { CommonModule } from '@app/common';
 
 @Module({
@@ -24,6 +25,7 @@ import { CommonModule } from '@app/common';
       }),
     }),
     DeTaiModule,
+    HoiDongModule,
     CommonModule,
   ],
 })

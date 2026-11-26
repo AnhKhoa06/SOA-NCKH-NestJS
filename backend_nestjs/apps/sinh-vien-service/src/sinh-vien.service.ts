@@ -36,14 +36,25 @@ export class SinhVienService {
 
   // CREATE - Thêm sinh viên mới
   async create(data: CreateSinhVienDto): Promise<SinhVien> {
+    const maSV = data.maSV?.trim() || data.MaSV?.trim();
+    if (!maSV) {
+      throw new BadRequestException('Mã sinh viên không được để trống');
+    }
+
     const existingStudent = await this.sinhVienRepository.findOne({
-      where: { MaSV: data.MaSV },
+      where: { maSV },
     });
     if (existingStudent) {
       throw new ConflictException('Mã sinh viên đã tồn tại');
     }
     await this.kiemTraNganh(data.maNganh);
-    const sinhVien = this.sinhVienRepository.create(data);
+    const studentData = { ...data };
+    delete studentData.maSV;
+    delete studentData.MaSV;
+    const sinhVien = this.sinhVienRepository.create({
+      ...studentData,
+      maSV,
+    });
     return await this.sinhVienRepository.save(sinhVien);
   }
 
@@ -77,7 +88,7 @@ export class SinhVienService {
       }
 
       const data = plainToInstance(CreateSinhVienDto, {
-        MaSV: maSV,
+        maSV,
         hoTen,
         email: email || undefined,
         lop: lop || undefined,
@@ -95,7 +106,7 @@ export class SinhVienService {
       }
 
       const existing = await this.sinhVienRepository.findOne({
-        where: { MaSV: maSV },
+        where: { maSV },
       });
       if (existing) {
         results.failed++;
@@ -160,13 +171,13 @@ export class SinhVienService {
 
     const query = this.sinhVienRepository.createQueryBuilder('sv');
     if (ids.length > 0) {
-      query.where('sv.MaSV IN (:...ids)', { ids });
+      query.where('sv.maSV IN (:...ids)', { ids });
     } else {
       query.where('sv.trangThai = :tt', { tt: 'HOAT_DONG' });
     }
 
     if (q.q) {
-      query.andWhere('(sv.hoTen LIKE :kw OR sv.MaSV LIKE :kw)', {
+      query.andWhere('(sv.hoTen LIKE :kw OR sv.maSV LIKE :kw)', {
         kw: `%${q.q}%`,
       });
     }
@@ -178,7 +189,7 @@ export class SinhVienService {
     }
 
     const [data, total] = await query
-      .orderBy('sv.MaSV', 'ASC')
+      .orderBy('sv.maSV', 'ASC')
       .skip((q.page - 1) * q.size)
       .take(q.size)
       .getManyAndCount();
@@ -193,30 +204,33 @@ export class SinhVienService {
   }
 
   // READ ONE - Lấy 1 sinh viên theo MaSV
-  async findOne(MaSV: string): Promise<SinhVien> {
+  async findOne(maSV: string): Promise<SinhVien> {
     const sinhVien = await this.sinhVienRepository.findOne({
-      where: { MaSV },
+      where: { maSV },
     });
 
     if (!sinhVien || sinhVien.trangThai !== 'HOAT_DONG') {
-      throw new NotFoundException(`Không tìm thấy sinh viên ${MaSV}`);
+      throw new NotFoundException(`Không tìm thấy sinh viên ${maSV}`);
     }
 
     return sinhVien;
   }
 
   // UPDATE - Cập nhật thông tin sinh viên
-  async update(MaSV: string, data: UpdateSinhVienDto): Promise<SinhVien> {
-    const sinhVien = await this.findOne(MaSV);
+  async update(maSV: string, data: UpdateSinhVienDto): Promise<SinhVien> {
+    const sinhVien = await this.findOne(maSV);
     await this.kiemTraNganh(data.maNganh);
-    Object.assign(sinhVien, data);
+    const updateData = { ...data };
+    delete updateData.maSV;
+    delete updateData.MaSV;
+    Object.assign(sinhVien, updateData);
     return await this.sinhVienRepository.save(sinhVien);
   }
 
-  async remove(MaSV: string): Promise<{ message: string }> {
-    const sinhVien = await this.findOne(MaSV);
+  async remove(maSV: string): Promise<{ message: string }> {
+    const sinhVien = await this.findOne(maSV);
     sinhVien.trangThai = 'NGUNG_HOAT_DONG';
     await this.sinhVienRepository.save(sinhVien);
-    return { message: `Đã xóa sinh viên ${MaSV}` };
+    return { message: `Đã xóa sinh viên ${maSV}` };
   }
 }
