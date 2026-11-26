@@ -6,29 +6,26 @@ Hệ thống (tên gọi **SOA-NCKH**) quản lý toàn bộ quy trình nghiên 
 
 Tài liệu đặc tả yêu cầu phần mềm đầy đủ (SRS, chuẩn ISO/IEC/IEEE 29148): yêu cầu chức năng FR-01 → FR-33, phi chức năng NFR-01 → NFR-16, mô hình UML, phân tích kiến trúc SOA, mô hình dữ liệu, kiểm thử và ma trận truy vết — nằm trong tài liệu SRS của nhóm (`SRS_SOA-NCKH.docx`). Mã yêu cầu trong README này lấy theo tài liệu đó.
 
-## Trạng thái hiện tại (cập nhật 22/11/2026)
+## Trạng thái hiện tại (cập nhật 26/11/2026)
 
 Tài liệu SRS đặc tả hệ thống **đích** gồm 8 dịch vụ; bảng dưới đây cho biết phần nào đã chạy được, tránh nhầm đặc tả với tiến độ thực tế.
 
-| Hạng mục                                                                                           | Trạng thái                                                           |
-| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Tách monorepo NestJS (`apps/` + `libs/`)                                                           | Xong                                                                 |
-| Academic Service — hiện là Student service, cổng 3001, CSDL `qldatn_sinhvien`                      | Xong (mức cơ bản)                                                    |
-| Topic Service, cổng 3002, CSDL `qldatn_detai`                                                      | Xong (mức cơ bản)                                                    |
-| Registration Service, cổng 3003, CSDL `qldatn_dangky`, gọi HTTP sang 3001 và 3002                  | Xong (mức cơ bản)                                                    |
-| Auth Service, cổng 3004, CSDL `qldatn_auth`: đăng nhập, làm mới, đăng xuất theo tài khoản          | Xong                                                                 |
-| Phân quyền theo vai trò (QTV/GV/SV), Auth có CSDL và quản lý tài khoản (FR-20 → FR-22)             | Xong (token mang vai trò, `@Roles()`, quản lý tài khoản)             |
-| Guard dùng chung (`libs/common`): JWT, `RolesGuard`, `@Roles()`, `@CurrentUser()`                  | Xong                                                                 |
-| API Gateway, cổng 3000: proxy, kiểm tra JWT và vai trò theo tuyến, CORS, giới hạn tốc độ           | Xong (mức cơ bản)                                                    |
-| Frontend React qua API Gateway: khung sidebar + topbar theo vai trò, trang Tài khoản, Đổi mật khẩu | Xong phần khung; các trang nghiệp vụ còn lại là trang trống chờ điền |
-| Mở rộng Academic Service: khoa, ngành, giảng viên, GPA                                             | Chưa làm                                                             |
-| Mở rộng Topic Service: trạng thái đề tài, ngành/GPA yêu cầu, duyệt đề tài                          | Chưa làm                                                             |
-| Đợt đề tài, hồ sơ, hội đồng, nghiệm thu, quy đổi giờ NCKH (thuộc Topic + Report)                   | Chưa làm                                                             |
-| Notification Service (cổng 3005), Report Service (cổng 3006)                                       | Chưa làm                                                             |
-| **AI Service (cổng 3007):** kiểm tra đề tài trùng bằng RAG, gợi ý thành viên hội đồng              | Chưa làm                                                             |
-| Hàng đợi thông điệp, sổ đăng ký dịch vụ                                                            | Chưa làm                                                             |
-| Health check, retry, circuit breaker, Docker                                                       | Chưa làm                                                             |
-| Màn hình frontend cho các chức năng mới, Swagger/OpenAPI                                           | Chưa làm                                                             |
+| Hạng mục                                                                                             | Trạng thái                                                                                  |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Tách monorepo NestJS (`apps/` + `libs/`)                                                             | Xong                                                                                        |
+| Academic Service (`sinh-vien-service`), cổng 3001, CSDL `qldatn_sinhvien` (Khoa, Ngành, Lớp, GV, SV) | Xong (CRUD, lọc, phân trang, import Excel, xóa mềm, giao diện đầy đủ)                       |
+| Topic Service (`de-tai-service`), cổng 3002, CSDL `qldatn_detai`                                     | Xong mức cơ bản + gán `MaGV` xác minh qua Academic, phân quyền sở hữu GV; chưa làm đợt/duyệt |
+| Registration Service (`dang-ky-service`), cổng 3003, CSDL `qldatn_dangky`                            | Xong nghiệp vụ đăng ký, duyệt/từ chối, khóa chỉ tiêu, giao diện theo vai trò                |
+| Auth Service (`auth-service`), cổng 3004, CSDL `qldatn_auth`                                         | Xong (đăng nhập bằng mã, tạo hồ sơ + tài khoản 1 bước, đổi MK lần đầu, đặt lại MK)          |
+| Guard dùng chung (`libs/common`): JWT, `RolesGuard`, `@Roles()`, `@CurrentUser()`                    | Xong                                                                                        |
+| API Gateway, cổng 3000: proxy, kiểm tra JWT và vai trò theo tuyến, CORS, giới hạn tốc độ             | Xong                                                                                        |
+| Notification Service (`notification-service`), cổng 3005, CSDL `qldatn_thongbao`                     | Xong hộp thư thông báo, nhật ký hoạt động & giao diện (`ThongBao.jsx`, `NhatKy.jsx`)        |
+| Report Service (`report-service`), cổng 3006, CSDL `qldatn_baocao`                                   | Xong API & 4 trang giao diện (`TongQuan`, `ThongKeDeTai`, `ThongKeSinhVien`, `GioNckh`)     |
+| Hội đồng nghiệm thu (thuộc `de-tai-service/src/hoi-dong`)                                            | Đã có API lập hội đồng & kiểm tra xung đột lợi ích (B1–B3); giao diện đang chờ hoàn thiện   |
+| Mở rộng Topic Service: đợt đề tài, trạng thái nhiều bước, duyệt đề tài, nộp hồ sơ                    | Chưa làm (Khang phụ trách)                                                                  |
+| **AI Service (cổng 3007):** kiểm tra đề tài trùng bằng RAG, gợi ý thành viên hội đồng                | Chưa làm                                                                                    |
+| Hàng đợi thông điệp (`libs/events` + RabbitMQ), sổ đăng ký dịch vụ                                   | Chưa làm                                                                                    |
+| Health check, retry, circuit breaker, Docker, Swagger/OpenAPI                                        | Chưa làm                                                                                    |
 
 ## Kiến trúc đích (theo SRS) — 8 dịch vụ
 
@@ -67,8 +64,8 @@ Nguyên tắc đang áp dụng (chi tiết ở Chương 7 của SRS):
 | `apps/de-tai-service`       | Topic Service        | 3002 | `qldatn_detai`                     | Khang              |
 | `apps/dang-ky-service`      | Registration Service | 3003 | `qldatn_dangky`                    | Khoa (nhóm trưởng) |
 | `apps/auth-service`         | Auth Service         | 3004 | `qldatn_auth`                      | Nhóm               |
-| _(chưa tạo)_                | Notification Service | 3005 | `qldatn_thongbao` (dự kiến)        | Lịch               |
-| _(chưa tạo)_                | Report Service       | 3006 | `qldatn_baocao` (dự kiến)          | Huy                |
+| `apps/notification-service` | Notification Service | 3005 | `qldatn_thongbao`                  | Lịch               |
+| `apps/report-service`       | Report Service       | 3006 | `qldatn_baocao`                    | Huy                |
 | _(chưa tạo)_                | AI Service           | 3007 | `qldatn_ai` (dự kiến) + kho vector | Khoa (nhóm trưởng) |
 
 Lưu ý tên database vẫn giữ tiền tố `qldatn_` (viết tắt cũ của "quản lý đồ án tốt nghiệp") dù đề tài đã đổi tên — việc đổi tiền tố database là tùy chọn, không bắt buộc, nhóm có thể giữ nguyên để đỡ phải sửa lại mọi cấu hình `.env`, `database.sql` đã có.
@@ -151,7 +148,19 @@ npx nest start api-gateway
 
 5. **Lấy token:** `POST http://localhost:3000/auth/login` với `{ "username", "password" }`, gửi kèm `Authorization: Bearer <access_token>` cho các request sau — gọi qua cổng **3000** (Gateway).
 
-   Lần chạy đầu, Auth Service tự tạo 3 tài khoản thử trong bảng `TaiKhoan` (khi bảng còn trống): `admin` (QTV, tên và mật khẩu lấy từ `ADMIN_USER`, `ADMIN_PASS`), `gv01` (GV, mã GV001) và `sv01` (SV, mã SV001). Mật khẩu hai tài khoản sau là `Test@12345` (đổi bằng biến `SEED_PASSWORD`).
+   Lần chạy đầu, Auth Service tự tạo các tài khoản thử trong bảng `TaiKhoan` (khi bảng còn trống): `admin` / `QTV001` (QTV, mật khẩu từ `ADMIN_PASS`, mặc định `admin123`), `GV001` (GV), `SV001` và `SV002` (SV). Mật khẩu các tài khoản GV/SV mẫu là `Test@12345` (đổi bằng biến `SEED_PASSWORD`). Đăng nhập bằng mã đăng nhập không phân biệt hoa/thường (`sv001` hay `SV001` đều hợp lệ).
+
+   Để nạp hàng loạt từ file mẫu `backend_nestjs/seeds/users.sample.csv` (idempotent, chạy nhiều lần không nhân đôi):
+   ```powershell
+   cd backend_nestjs
+   npm run seed:users
+   ```
+
+   Để chạy kiểm thử E2E xuyên dịch vụ (yêu cầu các service 3000–3004 đang chạy):
+   ```powershell
+   cd backend_nestjs
+   npm run test:e2e:soa
+   ```
 
 ## Giới hạn đã biết
 

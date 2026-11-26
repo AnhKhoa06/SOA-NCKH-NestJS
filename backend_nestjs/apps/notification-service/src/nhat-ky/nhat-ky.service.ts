@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { randomUUID } from 'crypto';
 import { Repository } from 'typeorm';
 import { NhatKy } from './nhat-ky.entity';
 
@@ -17,6 +18,47 @@ export class NhatKyService {
       throw new BadRequestException(`${ten} không hợp lệ (dùng định dạng ISO 8601)`);
     }
     return d;
+  }
+
+  async ghiNhatKy(data: {
+    nguoiThucHien?: string;
+    vaiTro?: string;
+    hanhDong: string;
+    doiTuong?: string;
+    ketQua?: string;
+    diaChiIp?: string;
+  }) {
+    const row = this.repo.create({
+      thoiDiem: new Date(),
+      nguoiThucHien: data.nguoiThucHien || null,
+      vaiTro: data.vaiTro || null,
+      hanhDong: data.hanhDong,
+      doiTuong: data.doiTuong || null,
+      ketQua: data.ketQua || 'THANH_CONG',
+      diaChiIp: data.diaChiIp || null,
+      maSuKien: randomUUID(),
+    });
+    return this.repo.save(row);
+  }
+
+  async boLoc() {
+    const [nguoiRows, hanhDongRows] = await Promise.all([
+      this.repo
+        .createQueryBuilder('nk')
+        .select('DISTINCT nk.nguoiThucHien', 'v')
+        .where('nk.nguoiThucHien IS NOT NULL')
+        .orderBy('nk.nguoiThucHien', 'ASC')
+        .getRawMany(),
+      this.repo
+        .createQueryBuilder('nk')
+        .select('DISTINCT nk.hanhDong', 'v')
+        .orderBy('nk.hanhDong', 'ASC')
+        .getRawMany(),
+    ]);
+    return {
+      nguoiThucHien: nguoiRows.map((r) => r.v).filter(Boolean),
+      hanhDong: hanhDongRows.map((r) => r.v).filter(Boolean),
+    };
   }
 
   async danhSach(params: {

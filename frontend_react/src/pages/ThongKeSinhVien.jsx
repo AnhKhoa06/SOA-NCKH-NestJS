@@ -152,6 +152,7 @@ function ThongKeSinhVien() {
             Xuất DS nhắc nhở
           </button>
           <button
+            className="btn-secondary"
             onClick={loadData}
             disabled={loading}
             style={{
@@ -160,6 +161,7 @@ function ThongKeSinhVien() {
               gap: "6px",
               padding: "8px 14px",
               background: "white",
+              color: "#475569",
               border: "1px solid #cbd5e1",
               borderRadius: "8px",
               cursor: "pointer",

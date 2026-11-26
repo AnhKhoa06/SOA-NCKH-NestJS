@@ -14,6 +14,9 @@ export class DeTai {
   @Column({ name: 'GiangVienHuongDan', nullable: true })
   giangVienHuongDan: string;
 
+  @Column({ name: 'MaGV', type: 'varchar', length: 20, nullable: true })
+  maGV: string | null;
+
   @Column({ name: 'SoLuongToiDa', default: 1 })
   soLuongToiDa: number;
 }

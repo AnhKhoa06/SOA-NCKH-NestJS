@@ -6,5 +6,7 @@ CREATE TABLE DeTai (
     TenDeTai VARCHAR(255) NOT NULL,
     MoTa TEXT,
     GiangVienHuongDan VARCHAR(255),
-    SoLuongToiDa INT DEFAULT 1
+    MaGV VARCHAR(20) NULL,
+    SoLuongToiDa INT DEFAULT 1,
+    KEY IX_DeTai_MaGV (MaGV)
 );

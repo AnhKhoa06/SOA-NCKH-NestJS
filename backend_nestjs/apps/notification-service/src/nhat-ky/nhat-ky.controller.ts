@@ -1,11 +1,32 @@
-import { Controller, Get, Query } from '@nestjs/common';
-import { Roles } from '@app/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Public, Roles } from '@app/common';
 import { NhatKyService } from './nhat-ky.service';
 
 @Controller('nhat-ky')
 @Roles('QTV')
 export class NhatKyController {
   constructor(private readonly svc: NhatKyService) {}
+
+  @Public()
+  @Post('noi-bo')
+  ghiNoiBo(
+    @Body()
+    body: {
+      nguoiThucHien?: string;
+      vaiTro?: string;
+      hanhDong: string;
+      doiTuong?: string;
+      ketQua?: string;
+      diaChiIp?: string;
+    },
+  ) {
+    return this.svc.ghiNhatKy(body);
+  }
+
+  @Get('bo-loc')
+  boLoc() {
+    return this.svc.boLoc();
+  }
 
   @Get()
   danhSach(

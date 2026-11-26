@@ -27,16 +27,43 @@ export class GiangVienService {
   }
 
   async create(dto: CreateGiangVienDto): Promise<GiangVien> {
-    const existing = await this.repo.findOne({ where: { maGV: dto.maGV } });
-    if (existing) {
+    const maGV = dto.maGV.trim().toUpperCase();
+    const existing = await this.repo.findOne({ where: { maGV } });
+    if (existing && existing.trangThai === 'HOAT_DONG') {
       throw new ConflictException({
         statusCode: 409,
         code: 'TRUNG_MA',
-        message: `Mã giảng viên ${dto.maGV} đã tồn tại`,
+        message: `Mã giảng viên ${maGV} đã tồn tại`,
       });
     }
+    if (dto.email?.trim()) {
+      const emailTrung = await this.repo.findOne({
+        where: { email: dto.email.trim(), trangThai: 'HOAT_DONG' },
+      });
+      if (emailTrung && emailTrung.maGV !== maGV) {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'TRUNG_EMAIL',
+          message: `Email ${dto.email.trim()} đã được sử dụng`,
+        });
+      }
+    }
     await this.kiemTraKhoa(dto.maKhoa);
-    return this.repo.save(this.repo.create(dto));
+    if (existing) {
+      Object.assign(existing, dto, {
+        maGV,
+        email: dto.email?.trim() || undefined,
+        trangThai: 'HOAT_DONG',
+      });
+      return this.repo.save(existing);
+    }
+    return this.repo.save(
+      this.repo.create({
+        ...dto,
+        maGV,
+        email: dto.email?.trim() || undefined,
+      }),
+    );
   }
 
   async findAll(q: QueryGiangVienDto) {

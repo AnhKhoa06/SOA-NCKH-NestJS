@@ -49,9 +49,27 @@ export class GiangVienController {
     return this.service.findOne(maGV);
   }
 
-  @Roles('QTV')
+  @Roles('QTV', 'GV')
   @Patch(':maGV')
-  update(@Param('maGV') maGV: string, @Body() dto: UpdateGiangVienDto) {
+  update(
+    @Param('maGV') maGV: string,
+    @Body() dto: UpdateGiangVienDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    if (user.role === 'GV') {
+      if (user.maDinhDanh?.toUpperCase() !== maGV.trim().toUpperCase()) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'KHONG_DU_QUYEN',
+          message: 'Chỉ được cập nhật hồ sơ của chính mình',
+        });
+      }
+      const selfData: UpdateGiangVienDto = {
+        ...(dto.hoTen !== undefined ? { hoTen: dto.hoTen } : {}),
+        ...(dto.email !== undefined ? { email: dto.email } : {}),
+      };
+      return this.service.update(maGV, selfData);
+    }
     return this.service.update(maGV, dto);
   }
 

@@ -28,32 +28,49 @@ export class AuthService implements OnModuleInit {
     const adminUser = this.config.get<string>('ADMIN_USER', 'admin');
     const adminPass = this.config.get<string>('ADMIN_PASS', 'admin123');
     const seedPass = this.config.get<string>('SEED_PASSWORD', 'Test@12345');
-    const rows: Partial<TaiKhoan>[] = [
+    const rows: Partial<TaiKhoan & { pass: string }>[] = [
       {
         tenDangNhap: adminUser,
         vaiTro: 'QTV',
         maDinhDanh: null,
+        email: 'admin@example.com',
         pass: adminPass,
-      } as any,
+      },
       {
-        tenDangNhap: 'gv01',
+        tenDangNhap: 'QTV001',
+        vaiTro: 'QTV',
+        maDinhDanh: 'QTV001',
+        email: 'qtv001@example.com',
+        pass: adminPass,
+      },
+      {
+        tenDangNhap: 'GV001',
         vaiTro: 'GV',
         maDinhDanh: 'GV001',
+        email: 'gv001@example.com',
         pass: seedPass,
-      } as any,
+      },
       {
-        tenDangNhap: 'sv01',
+        tenDangNhap: 'SV001',
         vaiTro: 'SV',
         maDinhDanh: 'SV001',
+        email: 'sv001@example.com',
         pass: seedPass,
-      } as any,
+      },
+      {
+        tenDangNhap: 'SV002',
+        vaiTro: 'SV',
+        maDinhDanh: 'SV002',
+        email: 'sv002@example.com',
+        pass: seedPass,
+      },
     ];
     for (const r of rows) {
-      const { pass, ...rest } = r as any;
+      const { pass, ...rest } = r;
       await this.tkRepo.save(
         this.tkRepo.create({
           ...rest,
-          matKhauBam: await bcrypt.hash(pass, 10),
+          matKhauBam: await bcrypt.hash(pass!, 10),
         }),
       );
     }
@@ -78,7 +95,7 @@ export class AuthService implements OnModuleInit {
     const refresh_token = await this.jwt.signAsync(payload, {
       secret: this.config.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: this.config.get('JWT_REFRESH_EXPIRES', '7d') as any,
-      jwtid: randomUUID(), // mỗi token là duy nhất
+      jwtid: randomUUID(),
     });
     const { exp } = this.jwt.decode(refresh_token) as { exp: number };
     await this.rtRepo.save(
@@ -96,16 +113,24 @@ export class AuthService implements OnModuleInit {
         username: tk.tenDangNhap,
         role: tk.vaiTro,
         maDinhDanh: tk.maDinhDanh,
+        batBuocDoiMatKhau: tk.batBuocDoiMatKhau,
       },
     };
   }
 
+  // Đăng nhập bằng mã đăng nhập (không phân biệt hoa/thường) + mật khẩu
   async login(username: string, password: string) {
     const maxFails = Number(this.config.get('LOGIN_MAX_FAILS', 5));
     const lockMin = Number(this.config.get('LOGIN_LOCK_MINUTES', 15));
-    const sai = new UnauthorizedException('Sai tên đăng nhập hoặc mật khẩu');
+    const sai = new UnauthorizedException('Sai mã đăng nhập hoặc mật khẩu');
+    const ma = (username ?? '').trim();
+    if (!ma) throw sai;
 
-    const tk = await this.tkRepo.findOne({ where: { tenDangNhap: username } });
+    const tk = await this.tkRepo
+      .createQueryBuilder('tk')
+      .where('LOWER(tk.tenDangNhap) = LOWER(:ma)', { ma })
+      .orWhere('LOWER(tk.maDinhDanh) = LOWER(:ma)', { ma })
+      .getOne();
     if (!tk) throw sai;
 
     if (tk.khoaDen && tk.khoaDen > new Date()) {
@@ -160,8 +185,6 @@ export class AuthService implements OnModuleInit {
     if (!tk || tk.trangThai !== 'HOAT_DONG') {
       throw new UnauthorizedException('Tài khoản không còn hoạt động');
     }
-    // Xoay vòng: token cũ vô hiệu ngay. Cập nhật có điều kiện để hai yêu cầu
-    // làm mới đồng thời bằng cùng một token chỉ có một yêu cầu thành công.
     const dung = await this.rtRepo.update(
       { id: row.id, daThuHoi: false },
       { daThuHoi: true },

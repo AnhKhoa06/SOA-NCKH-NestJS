@@ -247,15 +247,16 @@ export class DangKyService {
       `Không tìm thấy đề tài ${dk.maDeTai}`,
       auth,
     );
-    const maGVDeTai = dt.maGV ?? dt.MaGV;
-    if (maGVDeTai == null) {
+    const maGVDeTai = (dt.maGV ?? dt.MaGV ?? '').toString().trim().toUpperCase();
+    const maGVToken = maGV.trim().toUpperCase();
+    if (!maGVDeTai) {
       if (!this.choPhepThieuMaGV) {
         throw this.khongDat(
           'DETAI_THIEU_GIANG_VIEN',
           'Đề tài chưa có thông tin giảng viên phụ trách',
         );
       }
-    } else if (maGVDeTai !== maGV) {
+    } else if (maGVDeTai !== maGVToken) {
       throw new ForbiddenException({
         statusCode: 403,
         code: 'KHONG_DU_QUYEN',
@@ -400,14 +401,15 @@ export class DangKyService {
   // nên nếu Topic chưa lọc theo maGV hoặc chưa trả maGV thì kết quả rỗng (an toàn),
   // không bao giờ lộ đăng ký của đề tài người khác.
   private async deTaiCuaGV(maGV: string, auth?: string): Promise<number[]> {
+    const chuan = maGV.trim().toUpperCase();
     const body = await this.callService(
-      `${this.deTaiUrl}?maGV=${encodeURIComponent(maGV)}&size=100`,
+      `${this.deTaiUrl}?maGV=${encodeURIComponent(chuan)}&size=100`,
       'Không tìm thấy đề tài',
       auth,
     );
     const ds: any[] = Array.isArray(body) ? body : (body?.data ?? []);
     return ds
-      .filter((d) => (d.maGV ?? d.MaGV) === maGV)
+      .filter((d) => String(d.maGV ?? d.MaGV ?? '').trim().toUpperCase() === chuan)
       .map((d) => Number(d.maDeTai ?? d.MaDeTai))
       .filter((n) => Number.isInteger(n));
   }

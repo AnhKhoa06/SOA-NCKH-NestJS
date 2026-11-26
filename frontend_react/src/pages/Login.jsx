@@ -14,12 +14,17 @@ function Login({ onLogin }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const ma = username.trim();
+    if (!ma) {
+      setError("Vui lòng nhập mã sinh viên");
+      return;
+    }
     setError("");
     setLoading(true);
     try {
-      await login(username.trim(), password);
+      const user = await login(ma, password);
       onLogin();
-      navigate("/tong-quan");
+      navigate(user?.batBuocDoiMatKhau ? "/doi-mat-khau" : "/tong-quan");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -50,16 +55,16 @@ function Login({ onLogin }) {
         <div className="login-box">
           <h2>ĐĂNG NHẬP</h2>
           <p className="login-subtitle">
-            Dành cho quản trị viên, giảng viên và sinh viên
+            Đăng nhập bằng mã sinh viên, mã giảng viên hoặc mã quản trị
           </p>
           <form onSubmit={handleSubmit}>
             <div className="input-group">
-              <label>Tên đăng nhập</label>
+              <label>Mã sinh viên</label>
               <div className="input-with-icon">
                 <User size={18} className="input-icon" />
                 <input
                   type="text"
-                  placeholder="Nhập tên đăng nhập"
+                  placeholder="VD: 4651050119"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"

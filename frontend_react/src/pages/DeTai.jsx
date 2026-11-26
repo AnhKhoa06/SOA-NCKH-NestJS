@@ -1,12 +1,22 @@
-import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import { api } from "../api";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, Pencil, Trash2, ClipboardCheck } from "lucide-react";
+import { api, auth } from "../api";
 import { useToast } from "../components/Toast";
 import Modal from "../components/Modal";
 import ConfirmDialog from "../components/ConfirmDialog";
 
+const toList = (res) => (Array.isArray(res) ? res : res?.data || []);
+
 export default function DeTai() {
+  const user = auth.getUser() || {};
+  const role = user.role || "SV";
+  const canManage = role === "GV" || role === "QTV";
+  const myMaGV = (user.maDinhDanh || "").trim().toUpperCase();
+
   const [list, setList] = useState([]);
+  const [giangVien, setGiangVien] = useState([]);
+  const [gvSearch, setGvSearch] = useState("");
+  const [myGvName, setMyGvName] = useState("");
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
@@ -14,7 +24,7 @@ export default function DeTai() {
   const [form, setForm] = useState({
     tenDeTai: "",
     moTa: "",
-    giangVienHuongDan: "",
+    maGV: "",
     soLuongToiDa: 1,
   });
   const [editingId, setEditingId] = useState(null);
@@ -24,24 +34,66 @@ export default function DeTai() {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchList();
-  }, []);
+  const [registerTarget, setRegisterTarget] = useState(null);
+  const [registering, setRegistering] = useState(false);
 
-  const fetchList = async () => {
-    try {
-      setLoading(true);
-      const data = await api.get("/de-tai");
-      setList(data);
-    } catch (e) {
-      toast.error(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchList = useCallback(
+    async (isCancelled = () => false) => {
+      try {
+        setLoading(true);
+        const topicPath =
+          role === "GV" && myMaGV
+            ? `/de-tai?maGV=${encodeURIComponent(myMaGV)}`
+            : "/de-tai";
+        const requests = [api.get(topicPath)];
+        if (role === "QTV") {
+          requests.push(api.get("/giang-vien?size=100").catch(() => []));
+        } else if (role === "GV" && myMaGV) {
+          requests.push(
+            api.get(`/giang-vien/${encodeURIComponent(myMaGV)}`).catch(() => null),
+          );
+        }
+        const [data, extra] = await Promise.all(requests);
+        if (isCancelled()) return;
+        setList(toList(data));
+        if (role === "QTV") {
+          setGiangVien(toList(extra));
+        } else if (role === "GV" && extra) {
+          setMyGvName(extra.hoTen || extra.HoTen || "");
+        }
+      } catch (e) {
+        if (!isCancelled()) toast.error(e.message);
+      } finally {
+        if (!isCancelled()) setLoading(false);
+      }
+    },
+    [myMaGV, role, toast],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchList(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchList]);
+
+  const filteredGv = useMemo(() => {
+    const kw = gvSearch.trim().toLowerCase();
+    if (!kw) return giangVien;
+    return giangVien.filter((g) =>
+      `${g.maGV} ${g.hoTen} ${g.maKhoa}`.toLowerCase().includes(kw),
+    );
+  }, [giangVien, gvSearch]);
 
   const handleOpenAdd = () => {
-    setForm({ tenDeTai: "", moTa: "", giangVienHuongDan: "", soLuongToiDa: 1 });
+    setForm({
+      tenDeTai: "",
+      moTa: "",
+      maGV: role === "GV" ? myMaGV : "",
+      soLuongToiDa: 1,
+    });
+    setGvSearch("");
     setEditingId(null);
     setModalOpen(true);
   };
@@ -50,9 +102,10 @@ export default function DeTai() {
     setForm({
       tenDeTai: item.tenDeTai,
       moTa: item.moTa || "",
-      giangVienHuongDan: item.giangVienHuongDan || "",
+      maGV: item.maGV || "",
       soLuongToiDa: item.soLuongToiDa,
     });
+    setGvSearch("");
     setEditingId(item.maDeTai);
     setModalOpen(true);
   };
@@ -67,6 +120,10 @@ export default function DeTai() {
       toast.error("Tên đề tài là bắt buộc");
       return;
     }
+    if (role === "QTV" && !form.maGV) {
+      toast.error("Vui lòng chọn giảng viên hướng dẫn");
+      return;
+    }
     const soLuong = parseInt(form.soLuongToiDa, 10);
     if (!Number.isInteger(soLuong) || soLuong < 1) {
       toast.error("Số lượng tối đa phải là số nguyên từ 1 trở lên");
@@ -75,7 +132,12 @@ export default function DeTai() {
 
     try {
       setSaving(true);
-      const payload = { ...form, soLuongToiDa: soLuong };
+      const payload = {
+        tenDeTai: form.tenDeTai.trim(),
+        moTa: form.moTa,
+        soLuongToiDa: soLuong,
+        ...(role === "QTV" ? { maGV: form.maGV } : {}),
+      };
 
       if (editingId) {
         await api.put(`/de-tai/${editingId}`, payload);
@@ -101,21 +163,42 @@ export default function DeTai() {
       setDeleteOpen(false);
       fetchList();
     } catch (e) {
-      // Dù lỗi 409 hay lỗi nào cũng có e.message từ api.js ném ra
       toast.error(e.message);
     } finally {
       setDeleting(false);
     }
   };
 
+  const handleRegister = async () => {
+    if (!registerTarget) return;
+    try {
+      setRegistering(true);
+      await api.post("/dang-ky", { maDeTai: registerTarget.maDeTai });
+      toast.success("Đăng ký đề tài thành công");
+      setRegisterTarget(null);
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const canModifyRow = (item) =>
+    role === "QTV" ||
+    (role === "GV" &&
+      myMaGV &&
+      String(item.maGV || "").trim().toUpperCase() === myMaGV);
+
   return (
     <div>
       <div className="page-header">
-        <h2>Quản lý đề tài</h2>
-        <button onClick={handleOpenAdd}>
-          <Plus size={18} />
-          Thêm đề tài
-        </button>
+        <h2>{role === "SV" ? "Đề tài đang mở" : "Quản lý đề tài"}</h2>
+        {canManage && (
+          <button onClick={handleOpenAdd}>
+            <Plus size={18} />
+            Thêm đề tài
+          </button>
+        )}
       </div>
 
       <div className="card">
@@ -141,24 +224,48 @@ export default function DeTai() {
                   <td>{item.maDeTai}</td>
                   <td>{item.tenDeTai}</td>
                   <td>{item.moTa}</td>
-                  <td>{item.giangVienHuongDan}</td>
+                  <td>
+                    {item.giangVienHuongDan || "—"}
+                    {item.maGV && (
+                      <>
+                        <br />
+                        <small>{item.maGV}</small>
+                      </>
+                    )}
+                  </td>
                   <td>{item.soLuongToiDa}</td>
                   <td>
                     <div className="table-actions">
-                      <button
-                        className="btn-edit"
-                        onClick={() => handleOpenEdit(item)}
-                      >
-                        <Pencil size={16} />
-                        Sửa
-                      </button>
-                      <button
-                        className="btn-delete"
-                        onClick={() => handleOpenDelete(item)}
-                      >
-                        <Trash2 size={16} />
-                        Xóa
-                      </button>
+                      {canManage ? (
+                        canModifyRow(item) ? (
+                          <>
+                            <button
+                              className="btn-edit"
+                              onClick={() => handleOpenEdit(item)}
+                            >
+                              <Pencil size={16} />
+                              Sửa
+                            </button>
+                            <button
+                              className="btn-delete"
+                              onClick={() => handleOpenDelete(item)}
+                            >
+                              <Trash2 size={16} />
+                              Xóa
+                            </button>
+                          </>
+                        ) : (
+                          <small style={{ color: "#94a3b8" }}>Chỉ xem</small>
+                        )
+                      ) : (
+                        <button
+                          className="btn-edit"
+                          onClick={() => setRegisterTarget(item)}
+                        >
+                          <ClipboardCheck size={16} />
+                          Đăng ký
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -205,17 +312,38 @@ export default function DeTai() {
             rows={3}
           />
         </div>
-        <div className="form-group">
-          <label>Giảng viên hướng dẫn</label>
-          <input
-            type="text"
-            value={form.giangVienHuongDan}
-            onChange={(e) =>
-              setForm({ ...form, giangVienHuongDan: e.target.value })
-            }
-            placeholder="Tên giảng viên"
-          />
-        </div>
+        {role === "GV" ? (
+          <div className="form-group">
+            <label>Giảng viên hướng dẫn</label>
+            <input
+              type="text"
+              value={myGvName ? `${myMaGV} - ${myGvName}` : myMaGV}
+              disabled
+            />
+          </div>
+        ) : (
+          <div className="form-group">
+            <label>Giảng viên hướng dẫn *</label>
+            <input
+              type="text"
+              placeholder="Tìm mã, tên giảng viên hoặc khoa..."
+              value={gvSearch}
+              onChange={(e) => setGvSearch(e.target.value)}
+              style={{ marginBottom: 8 }}
+            />
+            <select
+              value={form.maGV}
+              onChange={(e) => setForm({ ...form, maGV: e.target.value })}
+            >
+              <option value="">-- Chọn giảng viên --</option>
+              {filteredGv.map((g) => (
+                <option key={g.maGV} value={g.maGV}>
+                  {g.maGV} – {g.hoTen} – {g.maKhoa}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="form-group">
           <label>Số lượng tối đa</label>
           <input
@@ -233,6 +361,17 @@ export default function DeTai() {
         loading={deleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={!!registerTarget}
+        title="Xác nhận đăng ký"
+        message={`Bạn muốn đăng ký đề tài "${registerTarget?.tenDeTai}"?`}
+        confirmText="Đăng ký"
+        confirmClassName=""
+        loading={registering}
+        onConfirm={handleRegister}
+        onCancel={() => setRegisterTarget(null)}
       />
     </div>
   );

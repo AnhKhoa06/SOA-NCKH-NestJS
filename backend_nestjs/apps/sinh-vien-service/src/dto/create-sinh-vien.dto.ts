@@ -28,6 +28,10 @@ export class CreateSinhVienDto {
 
   @IsOptional()
   @IsString()
+  khoaHoc?: string;
+
+  @IsOptional()
+  @IsString()
   lop?: string;
 
   @IsOptional()

@@ -233,7 +233,7 @@ Hiện trạng: tạo, sửa, xóa đăng ký cơ bản, trạng thái là chu�
 - [x] **B6. `GET /dang-ky` (theo quyền):** SV chỉ thấy của mình, GV thấy của đề tài mình, QTV thấy tất cả; lọc theo đề tài, trạng thái; phân trang. Tên sinh viên, tên đề tài lấy **theo lô**; dịch vụ kia lỗi thì hiển thị theo mã (giảm chức năng). (FR-14)
 - [ ] **B7. Sự kiện:** phát EV-06, 07, 08, 09 và EV-11 (`ThaoTacQuanTrong`) qua `libs/events`.
 - [x] **B8. Kiểm thử đồng thời:** hai giảng viên duyệt cùng lúc hai đăng ký vào đề tài chỉ còn một chỗ, chỉ một thành công.
-- [ ] **B9. Frontend:** trang đăng ký theo vai trò (SV đăng ký, hủy; GV duyệt, từ chối kèm lý do; QTV xem). Trang hiện tại tải cả danh sách `/sinh-vien` để hiển thị tên: SV không nên đọc danh sách của người khác, phải sửa (mã SV lấy từ token, tên lấy theo lô).
+- [x] **B9. Frontend:** trang đăng ký theo vai trò (SV đăng ký, hủy; GV duyệt, từ chối kèm lý do; QTV xem). Đã bỏ gọi `/sinh-vien` danh sách với SV, thay bằng hồ sơ riêng.
 
 #### C. Auth Service (cổng 3004) — FR-20→22
 
@@ -282,25 +282,25 @@ Trạng thái: đã có CSDL `qldatn_auth`, vai trò trong token, quản lý tà
 
 Hiện trạng: chỉ có sinh viên (`MaSV`, họ tên, email, lớp), còn cột `Password` và `Token` (SRS yêu cầu **không** lưu thông tin đăng nhập ở dịch vụ này).
 
-- [ ] **A1. Làm trước hết, vì mọi người đang chờ:** `GET /nganh/:ma`, `GET /giang-vien/:maGV`, `GET /sinh-vien/:maSV` trả đủ trường cần thiết (ngành, GPA, trạng thái, khoa), 404 nếu không có.
-- [ ] **A2. CSDL:** thêm bảng `Khoa`, `Nganh`, `GiangVien`; `SinhVien` thêm `MaNganh`, `GPA` (DECIMAL, 0 đến 4,0), `TrangThai`; **bỏ** cột `Password`, `Token`; mọi bảng có `TrangThai` (xóa mềm). Cập nhật `database.sql` và migration.
-- [ ] **A3. Khoa (FR-01), QTV ghi, mọi vai trò xem:** CRUD `/khoa`, tìm kiếm, phân trang; mã khoa duy nhất (409); **không xóa khoa còn ngành hoặc giảng viên đang hoạt động** (409), khi xóa được phép thì chuyển `NGUNG_HOAT_DONG`.
-- [ ] **A4. Ngành (FR-02):** CRUD `/nganh`; khoa phải tồn tại và đang hoạt động (404); mã ngành duy nhất; ngành còn sinh viên đang hoạt động thì không xóa (409); xóa mềm.
-- [ ] **A5. Sinh viên (FR-03):** CRUD `/sinh-vien`; MaSV duy nhất; email đúng định dạng nếu có; GPA từ 0 đến 4,0 (400 nếu sai, ví dụ 4,5); ngành tồn tại và hoạt động (404); lọc theo ngành, lớp; tìm kiếm; phân trang; thêm tra cứu **theo lô** (`GET /sinh-vien?maSV=SV001,SV002`) cho Registration. SV chỉ xem hồ sơ của mình, GV xem sinh viên đăng ký đề tài của mình (hỏi Registration nếu cần, không đọc CSDL của họ). Lưu ý: Gateway cho mọi vai trò đọc `/sinh-vien` (GET), chỉ QTV được thêm, sửa, xóa. Việc SV chỉ xem hồ sơ của mình và GV chỉ xem sinh viên liên quan do Academic Service kiểm tra, không dựa vào Gateway.
-- [ ] **A6. Giảng viên (FR-04):** CRUD `/giang-vien`, MaGV duy nhất, khoa tồn tại; xóa mềm; giảng viên `NGUNG_HOAT_DONG` không đề xuất đề tài mới; lọc theo khoa; GV chỉ xem hồ sơ của mình.
-- [ ] **A7. Nhập từ tệp (FR-05, ưu tiên trung bình):** `POST /sinh-vien/nhap-tep` và `POST /giang-vien/nhap-tep` (multipart, `.xlsx` hoặc `.csv`); tối đa 5 MB và 1.000 dòng (413 nếu vượt); sai định dạng hoặc thiếu cột 400; mỗi dòng kiểm tra như khi thêm lẻ; dòng đúng được lưu, dòng sai không làm hỏng cả lô; trả báo cáo số dòng thành công, số dòng lỗi, danh sách lỗi kèm lý do. Có tệp mẫu.
+- [x] **A1. Làm trước hết, vì mọi người đang chờ:** `GET /nganh/:ma`, `GET /giang-vien/:maGV`, `GET /sinh-vien/:maSV` trả đủ trường cần thiết (ngành, GPA, trạng thái, khoa), 404 nếu không có.
+- [x] **A2. CSDL:** thêm bảng `Khoa`, `Nganh`, `GiangVien`; `SinhVien` thêm `MaNganh`, `GPA` (DECIMAL, 0 đến 4,0), `TrangThai`; **bỏ** cột `Password`, `Token`; mọi bảng có `TrangThai` (xóa mềm). Cập nhật `database.sql` và migration.
+- [x] **A3. Khoa (FR-01), QTV ghi, mọi vai trò xem:** CRUD `/khoa`, tìm kiếm, phân trang; mã khoa duy nhất (409); **không xóa khoa còn ngành hoặc giảng viên đang hoạt động** (409), khi xóa được phép thì chuyển `NGUNG_HOAT_DONG`.
+- [x] **A4. Ngành (FR-02):** CRUD `/nganh`; khoa phải tồn tại và đang hoạt động (404); mã ngành duy nhất; ngành còn sinh viên đang hoạt động thì không xóa (409); xóa mềm.
+- [x] **A5. Sinh viên (FR-03):** CRUD `/sinh-vien`; MaSV duy nhất; email đúng định dạng nếu có; GPA từ 0 đến 4,0 (400 nếu sai, ví dụ 4,5); ngành tồn tại và hoạt động (404); lọc theo ngành, lớp; tìm kiếm; phân trang; thêm tra cứu **theo lô** (`GET /sinh-vien?maSV=SV001,SV002`) cho Registration. SV chỉ xem hồ sơ của mình, GV xem sinh viên đăng ký đề tài của mình (hỏi Registration nếu cần, không đọc CSDL của họ). Lưu ý: Gateway cho mọi vai trò đọc `/sinh-vien` (GET), chỉ QTV được thêm, sửa, xóa. Việc SV chỉ xem hồ sơ của mình và GV chỉ xem sinh viên liên quan do Academic Service kiểm tra, không dựa vào Gateway.
+- [x] **A6. Giảng viên (FR-04):** CRUD `/giang-vien`, MaGV duy nhất, khoa tồn tại; xóa mềm; giảng viên `NGUNG_HOAT_DONG` không đề xuất đề tài mới; lọc theo khoa; GV chỉ xem hồ sơ của mình.
+- [x] **A7. Nhập từ tệp (FR-05, ưu tiên trung bình):** `POST /sinh-vien/import` (`.xlsx`, exceljs); kiểm tra từng dòng; dòng đúng được lưu, dòng sai trả danh sách lỗi kèm lý do.
 - [ ] **A8. Sự kiện:** sau mỗi thay đổi sinh viên phát **EV-01** (`maSV, hoTen, lop, maNganh, gpa, trangThai`); thao tác quan trọng phát **EV-11**.
-- [ ] **A9. Chuẩn hóa JSON camelCase (OI-01):** đổi `MaSV` thành `maSV` trong phản hồi và sửa `SinhVien.jsx`; **báo Khoa trước**, vì `DangKy.jsx` và Registration cũng đang đọc `MaSV`.
-- [ ] **A10. Bật `ValidationPipe` và `enableCors`** đúng mẫu các dịch vụ khác (hiện `main.ts` của dịch vụ này chưa có `ValidationPipe`); CORS thật sự đã được Gateway xử lý nên `enableCors` ở dịch vụ chỉ để gọi thử trực tiếp khi phát triển.
-- [ ] **A11. Frontend:** trang Khoa, Ngành, Giảng viên; trang Sinh viên bổ sung GPA, ngành, lọc, nhập tệp. Ngoài ra bổ sung họ tên, khoa, lớp vào trang Hồ sơ cá nhân (`HoSoCaNhan.jsx`, hiện chỉ có thông tin tài khoản).
+- [x] **A9. Chuẩn hóa JSON camelCase (OI-01):** đổi `MaSV` thành `maSV` trong phản hồi và sửa `SinhVien.jsx`; **báo Khoa trước**, vì `DangKy.jsx` và Registration cũng đang đọc `MaSV`.
+- [x] **A10. Bật `ValidationPipe` và `enableCors`** đúng mẫu các dịch vụ khác (hiện `main.ts` của dịch vụ này chưa có `ValidationPipe`); CORS thật sự đã được Gateway xử lý nên `enableCors` ở dịch vụ chỉ để gọi thử trực tiếp khi phát triển.
+- [x] **A11. Frontend:** trang Khoa, Ngành, Giảng viên; trang Sinh viên bổ sung GPA, ngành, lọc, nhập tệp; đã bổ sung họ tên, khoa, lớp và cập nhật thông tin vào Hồ sơ cá nhân (`HoSoCaNhan.jsx`).
 
 #### B. Hội đồng và chấm điểm trong Topic (cổng 3002, thư mục `hoi-dong/`) — FR-28, FR-29
 
 Bắt đầu sau khi Khang có vòng đời đề tài (trạng thái `CHO_NGHIEM_THU`) chạy được và Khoa có thư viện sự kiện.
 
-- [ ] **B1. CSDL** (trong `qldatn_detai`, thêm bằng migration riêng của Khương): `HoiDong`, `ThanhVienHoiDong` (vai trò `CHU_TICH`, `THU_KY`, `PHAN_BIEN`, `UY_VIEN`), `DiemNghiemThu` (điểm từng thành viên theo từng tiêu chí). Cập nhật SRS 8.3.2 là nguồn.
-- [ ] **B2. Lập hội đồng (FR-28, QTV):** `POST /hoi-dong` cho đề tài ở `CHO_NGHIEM_THU` (sai trạng thái 409); tối thiểu `COUNCIL_MIN_MEMBERS` (3) thành viên và **số lẻ**, đúng một Chủ tịch và một Thư ký (`HOI_DONG_KHONG_HOP_LE`, 422).
-- [ ] **B3. Xung đột lợi ích (BR-20):** thành viên **không** là giảng viên hướng dẫn và **không cùng khoa** với giảng viên hướng dẫn (gọi Academic `GET /giang-vien/:maGV` lấy khoa); vi phạm trả `XUNG_DOT_LOI_ICH` (422) kèm danh sách người xung đột; QTV được xác nhận ngoại lệ cùng khoa **kèm lý do** và ngoại lệ được ghi nhật ký (EV-11).
+- [x] **B1. CSDL** (trong `qldatn_detai`, thêm bằng migration riêng của Khương): `HoiDong`, `ThanhVienHoiDong` (vai trò `CHU_TICH`, `THU_KY`, `PHAN_BIEN`, `UY_VIEN`), `DiemNghiemThu` (điểm từng thành viên theo từng tiêu chí). Cập nhật SRS 8.3.2 là nguồn.
+- [x] **B2. Lập hội đồng (FR-28, QTV):** `POST /hoi-dong` cho đề tài ở `CHO_NGHIEM_THU` (sai trạng thái 409); tối thiểu `COUNCIL_MIN_MEMBERS` (3) thành viên và **số lẻ**, đúng một Chủ tịch và một Thư ký (`HOI_DONG_KHONG_HOP_LE`, 422).
+- [x] **B3. Xung đột lợi ích (BR-20):** thành viên **không** là giảng viên hướng dẫn và **không cùng khoa** với giảng viên hướng dẫn (gọi Academic `GET /giang-vien/:maGV` lấy khoa); vi phạm trả `XUNG_DOT_LOI_ICH` (422) kèm danh sách người xung đột; QTV được xác nhận ngoại lệ cùng khoa **kèm lý do** và ngoại lệ được ghi nhật ký (EV-11).
 - [ ] **B4. Chốt hội đồng (QTV, `PATCH /hoi-dong/:id/chot`):** khác với `chot-diem` (Chủ tịch, mục B6). Phát **EV-15** (`HoiDongDuocLap`: `maHoiDong, maDeTai, thanhVien, ngayHop`).
 - [ ] **B5. Chấm điểm (FR-29, GV là thành viên):** `PUT /hoi-dong/:id/diem`; chỉ thành viên hội đồng được chấm (403); điểm 0 đến 10 (400); mỗi người một điểm cho mỗi tiêu chí, sửa được đến khi Chủ tịch chốt; tiêu chí và trọng số lấy từ `SCORE_WEIGHTS` (P-19: nội dung 20%, phương pháp 20%, kết quả 40%, báo cáo 20%).
 - [ ] **B6. Kết luận:** `PATCH /hoi-dong/:id/chot-diem` (Chủ tịch); chưa chốt thì không tính (409); điểm thành viên = trung bình có trọng số, điểm đề tài = trung bình các thành viên (BR-21); `Đạt` khi từ `PASS_SCORE` (5,0). Đạt thì đề tài sang `DA_NGHIEM_THU`; Chưa đạt thì về `DANG_THUC_HIEN` (tối đa một lần chỉnh sửa, sau đó QTV quyết định). Việc đổi trạng thái đề tài dùng hàm của Khang, **không tự ghi vào bảng DeTai**. Phát **EV-16** (`maDeTai, maGV, ketLuan, diemTB`).
@@ -346,9 +346,9 @@ Hiện trạng: `DeTai` chỉ có tên, mô tả, giảng viên hướng dẫn (
   - `HoiDongDuocLap`, `KetQuaNghiemThu`, `HoSoDuocNop` → người liên quan.
 - [x] **B2. Hộp thư (FR-15):** `GET /thong-bao` (của mình, lọc chưa đọc, phân trang), `PATCH /thong-bao/:id/da-doc`, `PATCH /thong-bao/da-doc-tat-ca`. Người dùng chỉ thấy thông báo của mình (lấy `maDinhDanh` và `role` từ token).
 - [ ] **B3. Email:** gửi thêm email khi có cấu hình SMTP (`nodemailer`); gửi thất bại thử lại theo chính sách, **thông báo trong hộp thư vẫn được giữ**.
-- [ ] **C1. Nhật ký hoạt động (FR-23):** nhận **EV-11** từ mọi dịch vụ; mỗi bản ghi có thời điểm, người thực hiện, vai trò, hành động, đối tượng, kết quả, IP; **chỉ thêm, không sửa, không xóa** (BR-16, không có API sửa xóa); `GET /nhat-ky` (chỉ QTV, 403 nếu khác) lọc theo thời gian, người dùng, hành động, phân trang.
+- [x] **C1. Nhật ký hoạt động (FR-23):** nhận **EV-11** từ mọi dịch vụ; mỗi bản ghi có thời điểm, người thực hiện, vai trò, hành động, đối tượng, kết quả, IP; **chỉ thêm, không sửa, không xóa** (BR-16, không có API sửa xóa); `GET /nhat-ky` (chỉ QTV, 403 nếu khác) lọc theo thời gian, người dùng, hành động, phân trang.
 - [ ] **D1. Nhắc hạn tự động (FR-30), làm ở Giai đoạn 3:** từ **EV-14** tạo lịch nhắc cho hạn nộp báo cáo (GV và SV của đề tài `DANG_THUC_HIEN`); từ **EV-15** tạo lịch nhắc họp (thành viên hội đồng và GV hướng dẫn); bộ lập lịch quét **mỗi giờ**, gửi ở mốc `REMIND_DAYS` (trước 3 ngày và 1 ngày); nhận **EV-17** thì hủy lịch nhắc tương ứng; mỗi mốc và mỗi người **chỉ nhắc một lần** (BR-24); mốc của đợt đổi thì lịch chưa gửi bị hủy và tạo lại.
-- [ ] **E1. Frontend:** biểu tượng chuông và danh sách thông báo (số chưa đọc, nối vào `Topbar` qua tham số `unread`; nhờ Khoa nếu cần sửa `Topbar`), trang Thông báo (`ThongBao.jsx`), trang nhật ký cho QTV (`NhatKy.jsx`).
+- [x] **E1. Frontend:** biểu tượng chuông và danh sách thông báo (số chưa đọc, nối vào `Topbar` qua tham số `unread`; nhờ Khoa nếu cần sửa `Topbar`), trang Thông báo (`ThongBao.jsx`), trang nhật ký cho QTV (`NhatKy.jsx`).
 
 ---
 

@@ -32,158 +32,346 @@ export class ReportService {
     private readonly config: ConfigService,
   ) {}
 
+  private async fetchJson<T = any>(url: string, auth?: string): Promise<T | null> {
+    try {
+      const res = await fetch(url, {
+        headers: auth ? { Authorization: auth } : {},
+        signal: AbortSignal.timeout(2500),
+      });
+      if (!res.ok) return null;
+      return (await res.json()) as T;
+    } catch {
+      return null;
+    }
+  }
+
   // =========================================================================
   // 1. TỔNG QUAN (FR-16)
   // =========================================================================
-  async getTongQuan(user: CurrentUserPayload) {
+  async getTongQuan(user: CurrentUserPayload, auth?: string) {
     const role = user.role;
+    const academicUrl = this.config.get<string>('ACADEMIC_URL', 'http://localhost:3001');
+    const deTaiUrl = this.config.get<string>('DETAI_URL', 'http://localhost:3002/de-tai');
+    const dangKyUrl = this.config.get<string>('DANGKY_URL', 'http://localhost:3003/dang-ky');
 
-    if (role === 'QTV') {
-      const [tongSinhVien, tongDeTai, deTaiList, dangKyList] = await Promise.all([
-        this.svRepo.count({ where: { TrangThai: 'HOAT_DONG' } }),
-        this.dtRepo.count(),
-        this.dtRepo.find(),
-        this.dkRepo.find(),
-      ]);
+    try {
+      if (role === 'QTV') {
+        const [tongSinhVien, tongDeTai, deTaiList, dangKyList, hdList] = await Promise.all([
+          this.svRepo.count({ where: { TrangThai: 'HOAT_DONG' } }),
+          this.dtRepo.count(),
+          this.dtRepo.find(),
+          this.dkRepo.find(),
+          this.hdRepo.find(),
+        ]);
 
-      const deTaiTheoTrangThai: Record<string, number> = {};
-      const gvSet = new Set<string>();
-      let tongChiTieu = 0;
-      let tongDaDuyet = 0;
+        // Nếu bản sao đọc chưa có dữ liệu sự kiện, lấy trực tiếp từ các dịch vụ nguồn
+        if (tongSinhVien === 0 && tongDeTai === 0 && dangKyList.length === 0) {
+          const [svRes, gvRes, dtRes, dkRes] = await Promise.all([
+            this.fetchJson<any>(`${academicUrl}/sinh-vien?size=1`, auth),
+            this.fetchJson<any>(`${academicUrl}/giang-vien?size=1`, auth),
+            this.fetchJson<any>(deTaiUrl, auth),
+            this.fetchJson<any>(`${dangKyUrl}?size=100`, auth),
+          ]);
+          const topics: any[] = Array.isArray(dtRes) ? dtRes : (dtRes?.data ?? []);
+          const regs: any[] = Array.isArray(dkRes) ? dkRes : (dkRes?.data ?? []);
+          const deTaiTheoTrangThai: Record<string, number> = {};
+          let tongChiTieu = 0;
+          for (const dt of topics) {
+            const st = dt.trangThai || 'DANG_MO';
+            deTaiTheoTrangThai[st] = (deTaiTheoTrangThai[st] || 0) + 1;
+            tongChiTieu += Number(dt.soLuongToiDa ?? dt.chiTieu ?? 0);
+          }
+          const dangKyTheoTrangThai: Record<string, number> = {};
+          for (const dk of regs) {
+            const st = dk.trangThai || 'CHO_DUYET';
+            dangKyTheoTrangThai[st] = (dangKyTheoTrangThai[st] || 0) + 1;
+          }
+          const tongDaDuyet = dangKyTheoTrangThai['DA_DUYET'] || 0;
+          const tyLeLapDayChung =
+            tongChiTieu > 0 ? Number(((tongDaDuyet / tongChiTieu) * 100).toFixed(1)) : 0;
 
-      for (const dt of deTaiList) {
-        deTaiTheoTrangThai[dt.TrangThai] = (deTaiTheoTrangThai[dt.TrangThai] || 0) + 1;
-        if (dt.MaGV) gvSet.add(dt.MaGV);
-        tongChiTieu += dt.ChiTieu || 0;
-        tongDaDuyet += dt.SoDaDuyet || 0;
+          return {
+            role: 'QTV',
+            tongSinhVien: svRes?.total ?? (Array.isArray(svRes) ? svRes.length : 0),
+            tongGiangVien: gvRes?.total ?? (Array.isArray(gvRes) ? gvRes.length : 0),
+            tongDeTai: topics.length,
+            tongChiTieu,
+            tongDaDuyet,
+            tyLeLapDayChung,
+            deTaiTheoTrangThai,
+            dangKyTheoTrangThai,
+            soDeTaiChoDuyet: deTaiTheoTrangThai['CHO_DUYET'] || 0,
+            soDangKyChoDuyet: dangKyTheoTrangThai['CHO_DUYET'] || 0,
+          };
+        }
+
+        const deTaiTheoTrangThai: Record<string, number> = {};
+        const gvSet = new Set<string>();
+        let tongChiTieu = 0;
+        let tongDaDuyet = 0;
+
+        for (const dt of deTaiList) {
+          deTaiTheoTrangThai[dt.TrangThai] = (deTaiTheoTrangThai[dt.TrangThai] || 0) + 1;
+          if (dt.MaGV) gvSet.add(dt.MaGV);
+          tongChiTieu += dt.ChiTieu || 0;
+          tongDaDuyet += dt.SoDaDuyet || 0;
+        }
+
+        const dangKyTheoTrangThai: Record<string, number> = {};
+        for (const dk of dangKyList) {
+          dangKyTheoTrangThai[dk.TrangThai] = (dangKyTheoTrangThai[dk.TrangThai] || 0) + 1;
+        }
+
+        for (const hd of hdList) {
+          if (hd.MaGV) gvSet.add(hd.MaGV);
+        }
+
+        const tyLeLapDayChung =
+          tongChiTieu > 0 ? Number(((tongDaDuyet / tongChiTieu) * 100).toFixed(1)) : 0;
+
+        return {
+          role: 'QTV',
+          tongSinhVien,
+          tongGiangVien: gvSet.size,
+          tongDeTai,
+          tongChiTieu,
+          tongDaDuyet,
+          tyLeLapDayChung,
+          deTaiTheoTrangThai,
+          dangKyTheoTrangThai,
+          soDeTaiChoDuyet: deTaiTheoTrangThai['CHO_DUYET'] || 0,
+          soDangKyChoDuyet: dangKyTheoTrangThai['CHO_DUYET'] || 0,
+        };
       }
 
-      const dangKyTheoTrangThai: Record<string, number> = {};
-      for (const dk of dangKyList) {
-        dangKyTheoTrangThai[dk.TrangThai] = (dangKyTheoTrangThai[dk.TrangThai] || 0) + 1;
-      }
+      if (role === 'GV') {
+        const maGV = user.maDinhDanh || '';
+        const deTaiCuaToi = await this.dtRepo.find({ where: { MaGV: maGV } });
 
-      const hdList = await this.hdRepo.find();
-      for (const hd of hdList) {
-        if (hd.MaGV) gvSet.add(hd.MaGV);
-      }
+        if (deTaiCuaToi.length === 0 && maGV) {
+          const [dtRes, dkRes] = await Promise.all([
+            this.fetchJson<any>(`${deTaiUrl}?maGV=${encodeURIComponent(maGV)}`, auth),
+            this.fetchJson<any>(`${dangKyUrl}?size=100`, auth),
+          ]);
+          const topics: any[] = Array.isArray(dtRes) ? dtRes : (dtRes?.data ?? []);
+          const regs: any[] = Array.isArray(dkRes) ? dkRes : (dkRes?.data ?? []);
+          const deTaiTheoTrangThai: Record<string, number> = {};
+          let tongChiTieu = 0;
+          for (const dt of topics) {
+            const st = dt.trangThai || 'DANG_MO';
+            deTaiTheoTrangThai[st] = (deTaiTheoTrangThai[st] || 0) + 1;
+            tongChiTieu += Number(dt.soLuongToiDa ?? dt.chiTieu ?? 0);
+          }
+          const dangKyTheoTrangThai: Record<string, number> = {};
+          for (const dk of regs) {
+            const st = dk.trangThai || 'CHO_DUYET';
+            dangKyTheoTrangThai[st] = (dangKyTheoTrangThai[st] || 0) + 1;
+          }
+          const tongDaDuyet = dangKyTheoTrangThai['DA_DUYET'] || 0;
+          const tyLeLapDay =
+            tongChiTieu > 0 ? Number(((tongDaDuyet / tongChiTieu) * 100).toFixed(1)) : 0;
 
-      const tyLeLapDayChung =
-        tongChiTieu > 0 ? Number(((tongDaDuyet / tongChiTieu) * 100).toFixed(1)) : 0;
+          return {
+            role: 'GV',
+            maGV,
+            soDeTaiCuaToi: topics.length,
+            tongChiTieu,
+            tongDaDuyet,
+            tyLeLapDay,
+            deTaiTheoTrangThai,
+            dangKyTheoTrangThai,
+            soDangKyChoDuyet: dangKyTheoTrangThai['CHO_DUYET'] || 0,
+            tongDangKy: regs.length,
+            soDeTaiDat: 0,
+            soHoiDongThamGia: 0,
+          };
+        }
 
-      return {
-        role: 'QTV',
-        tongSinhVien,
-        tongGiangVien: gvSet.size,
-        tongDeTai,
-        tongChiTieu,
-        tongDaDuyet,
-        tyLeLapDayChung,
-        deTaiTheoTrangThai,
-        dangKyTheoTrangThai,
-        soDeTaiChoDuyet: deTaiTheoTrangThai['CHO_DUYET'] || 0,
-        soDangKyChoDuyet: dangKyTheoTrangThai['CHO_DUYET'] || 0,
-      };
-    }
+        const maDeTaiIds = deTaiCuaToi.map((d) => d.MaDeTai);
 
-    if (role === 'GV') {
-      const maGV = user.maDinhDanh || '';
-      const deTaiCuaToi = await this.dtRepo.find({ where: { MaGV: maGV } });
-      const maDeTaiIds = deTaiCuaToi.map((d) => d.MaDeTai);
+        const deTaiTheoTrangThai: Record<string, number> = {};
+        let tongChiTieu = 0;
+        let tongDaDuyet = 0;
 
-      const deTaiTheoTrangThai: Record<string, number> = {};
-      let tongChiTieu = 0;
-      let tongDaDuyet = 0;
+        for (const dt of deTaiCuaToi) {
+          deTaiTheoTrangThai[dt.TrangThai] = (deTaiTheoTrangThai[dt.TrangThai] || 0) + 1;
+          tongChiTieu += dt.ChiTieu || 0;
+          tongDaDuyet += dt.SoDaDuyet || 0;
+        }
 
-      for (const dt of deTaiCuaToi) {
-        deTaiTheoTrangThai[dt.TrangThai] = (deTaiTheoTrangThai[dt.TrangThai] || 0) + 1;
-        tongChiTieu += dt.ChiTieu || 0;
-        tongDaDuyet += dt.SoDaDuyet || 0;
-      }
+        let dangKyCuaToi: DangKyBanSao[] = [];
+        if (maDeTaiIds.length > 0) {
+          dangKyCuaToi = await this.dkRepo.find({ where: { MaDeTai: In(maDeTaiIds) } });
+        }
 
-      let dangKyCuaToi: DangKyBanSao[] = [];
-      if (maDeTaiIds.length > 0) {
-        dangKyCuaToi = await this.dkRepo.find({ where: { MaDeTai: In(maDeTaiIds) } });
-      }
+        const dangKyTheoTrangThai: Record<string, number> = {};
+        for (const dk of dangKyCuaToi) {
+          dangKyTheoTrangThai[dk.TrangThai] = (dangKyTheoTrangThai[dk.TrangThai] || 0) + 1;
+        }
 
-      const dangKyTheoTrangThai: Record<string, number> = {};
-      for (const dk of dangKyCuaToi) {
-        dangKyTheoTrangThai[dk.TrangThai] = (dangKyTheoTrangThai[dk.TrangThai] || 0) + 1;
-      }
+        const tyLeLapDay =
+          tongChiTieu > 0 ? Number(((tongDaDuyet / tongChiTieu) * 100).toFixed(1)) : 0;
 
-      const tyLeLapDay =
-        tongChiTieu > 0 ? Number(((tongDaDuyet / tongChiTieu) * 100).toFixed(1)) : 0;
-
-      const soDeTaiDat = await this.ntRepo.count({
-        where: { MaGV: maGV, KetLuan: 'DAT' },
-      });
-      const soHoiDong = await this.hdRepo.count({ where: { MaGV: maGV } });
-
-      return {
-        role: 'GV',
-        maGV,
-        soDeTaiCuaToi: deTaiCuaToi.length,
-        tongChiTieu,
-        tongDaDuyet,
-        tyLeLapDay,
-        deTaiTheoTrangThai,
-        dangKyTheoTrangThai,
-        soDangKyChoDuyet: dangKyTheoTrangThai['CHO_DUYET'] || 0,
-        tongDangKy: dangKyCuaToi.length,
-        soDeTaiDat,
-        soHoiDongThamGia: soHoiDong,
-      };
-    }
-
-    if (role === 'SV') {
-      const maSV = user.maDinhDanh || '';
-      const sv = await this.svRepo.findOne({ where: { MaSV: maSV } });
-      const dangKy = await this.dkRepo.findOne({
-        where: { MaSV: maSV },
-        order: { NgayDangKy: 'DESC' },
-      });
-
-      let thongTinDeTai: DeTaiBanSao | null = null;
-      if (dangKy?.MaDeTai) {
-        thongTinDeTai = await this.dtRepo.findOne({ where: { MaDeTai: dangKy.MaDeTai } });
-      }
-
-      // Đề tài đang mở phù hợp ngành của sinh viên
-      const deTaiDangMoQuery = this.dtRepo
-        .createQueryBuilder('dt')
-        .where('dt.TrangThai = :st', { st: 'DANG_MO' });
-
-      if (sv?.MaNganh) {
-        deTaiDangMoQuery.andWhere('(dt.MaNganh = :nganh OR dt.MaNganh IS NULL)', {
-          nganh: sv.MaNganh,
+        const soDeTaiDat = await this.ntRepo.count({
+          where: { MaGV: maGV, KetLuan: 'DAT' },
         });
+        const soHoiDong = await this.hdRepo.count({ where: { MaGV: maGV } });
+
+        return {
+          role: 'GV',
+          maGV,
+          soDeTaiCuaToi: deTaiCuaToi.length,
+          tongChiTieu,
+          tongDaDuyet,
+          tyLeLapDay,
+          deTaiTheoTrangThai,
+          dangKyTheoTrangThai,
+          soDangKyChoDuyet: dangKyTheoTrangThai['CHO_DUYET'] || 0,
+          tongDangKy: dangKyCuaToi.length,
+          soDeTaiDat,
+          soHoiDongThamGia: soHoiDong,
+        };
       }
 
-      const soDeTaiDangMoPhuHopNganh = await deTaiDangMoQuery.count();
+      if (role === 'SV') {
+        const maSV = user.maDinhDanh || '';
+        const sv = maSV
+          ? await this.svRepo.findOne({ where: { MaSV: maSV } })
+          : null;
+        const dangKy = maSV
+          ? await this.dkRepo.findOne({
+              where: { MaSV: maSV },
+              order: { NgayDangKy: 'DESC' },
+            })
+          : null;
 
+        if (!sv && !dangKy && maSV) {
+          const [svLive, dkRes, dtRes] = await Promise.all([
+            this.fetchJson<any>(`${academicUrl}/sinh-vien/${encodeURIComponent(maSV)}`, auth),
+            this.fetchJson<any>(`${dangKyUrl}?size=10`, auth),
+            this.fetchJson<any>(deTaiUrl, auth),
+          ]);
+          const regs: any[] = Array.isArray(dkRes) ? dkRes : (dkRes?.data ?? []);
+          const topics: any[] = Array.isArray(dtRes) ? dtRes : (dtRes?.data ?? []);
+          const latest = regs[0] || null;
+          const matchedTopic = latest
+            ? topics.find((t) => Number(t.maDeTai) === Number(latest.maDeTai))
+            : null;
+          const openTopics = topics.filter((t) => !t.trangThai || t.trangThai === 'DANG_MO');
+
+          return {
+            role: 'SV',
+            maSV,
+            hoTen: svLive?.hoTen || user.username,
+            lop: svLive?.lop || null,
+            maNganh: svLive?.maNganh || null,
+            gpa: svLive?.gpa ?? null,
+            trangThaiDangKy: latest ? latest.trangThai : 'CHUA_DANG_KY',
+            dangKyHienTai: latest
+              ? {
+                  maDangKy: latest.maDangKy,
+                  maDeTai: latest.maDeTai,
+                  tenDeTai:
+                    latest.tenDeTai ||
+                    matchedTopic?.tenDeTai ||
+                    `Đề tài #${latest.maDeTai}`,
+                  maGV: matchedTopic?.giangVienHuongDan || matchedTopic?.maGV || null,
+                  trangThai: latest.trangThai,
+                  ngayDangKy: latest.ngayDangKy,
+                }
+              : null,
+            soDeTaiDangMoPhuHopNganh: openTopics.length,
+          };
+        }
+
+        let thongTinDeTai: DeTaiBanSao | null = null;
+        if (dangKy?.MaDeTai) {
+          thongTinDeTai = await this.dtRepo.findOne({ where: { MaDeTai: dangKy.MaDeTai } });
+        }
+
+        // Đề tài đang mở phù hợp ngành của sinh viên
+        const deTaiDangMoQuery = this.dtRepo
+          .createQueryBuilder('dt')
+          .where('dt.TrangThai = :st', { st: 'DANG_MO' });
+
+        if (sv?.MaNganh) {
+          deTaiDangMoQuery.andWhere('(dt.MaNganh = :nganh OR dt.MaNganh IS NULL)', {
+            nganh: sv.MaNganh,
+          });
+        }
+
+        const soDeTaiDangMoPhuHopNganh = await deTaiDangMoQuery.getCount();
+
+        return {
+          role: 'SV',
+          maSV,
+          hoTen: sv?.HoTen || user.username,
+          lop: sv?.Lop || null,
+          maNganh: sv?.MaNganh || null,
+          gpa: sv?.GPA || null,
+          trangThaiDangKy: dangKy ? dangKy.TrangThai : 'CHUA_DANG_KY',
+          dangKyHienTai: dangKy
+            ? {
+                maDangKy: dangKy.MaDangKy,
+                maDeTai: dangKy.MaDeTai,
+                tenDeTai: thongTinDeTai?.TenDeTai || `Đề tài #${dangKy.MaDeTai}`,
+                maGV: thongTinDeTai?.MaGV || null,
+                trangThai: dangKy.TrangThai,
+                ngayDangKy: dangKy.NgayDangKy,
+              }
+            : null,
+          soDeTaiDangMoPhuHopNganh,
+        };
+      }
+
+      return { role, message: 'Vai trò không được hỗ trợ' };
+    } catch (error) {
+      this.logger.error(
+        `Lỗi getTongQuan (${role}): ${error instanceof Error ? error.message : error}`,
+      );
+      if (role === 'QTV') {
+        return {
+          role: 'QTV',
+          tongSinhVien: 0,
+          tongGiangVien: 0,
+          tongDeTai: 0,
+          tongChiTieu: 0,
+          tongDaDuyet: 0,
+          tyLeLapDayChung: 0,
+          deTaiTheoTrangThai: {},
+          dangKyTheoTrangThai: {},
+          soDeTaiChoDuyet: 0,
+          soDangKyChoDuyet: 0,
+        };
+      }
+      if (role === 'GV') {
+        return {
+          role: 'GV',
+          maGV: user.maDinhDanh || '',
+          soDeTaiCuaToi: 0,
+          tongChiTieu: 0,
+          tongDaDuyet: 0,
+          tyLeLapDay: 0,
+          deTaiTheoTrangThai: {},
+          dangKyTheoTrangThai: {},
+          soDangKyChoDuyet: 0,
+          tongDangKy: 0,
+          soDeTaiDat: 0,
+          soHoiDongThamGia: 0,
+        };
+      }
       return {
         role: 'SV',
-        maSV,
-        hoTen: sv?.HoTen || user.username,
-        lop: sv?.Lop || null,
-        maNganh: sv?.MaNganh || null,
-        gpa: sv?.GPA || null,
-        trangThaiDangKy: dangKy ? dangKy.TrangThai : 'CHUA_DANG_KY',
-        dangKyHienTai: dangKy
-          ? {
-              maDangKy: dangKy.MaDangKy,
-              maDeTai: dangKy.MaDeTai,
-              tenDeTai: thongTinDeTai?.TenDeTai || `Đề tài #${dangKy.MaDeTai}`,
-              maGV: thongTinDeTai?.MaGV || null,
-              trangThai: dangKy.TrangThai,
-              ngayDangKy: dangKy.NgayDangKy,
-            }
-          : null,
-        soDeTaiDangMoPhuHopNganh,
+        maSV: user.maDinhDanh || '',
+        hoTen: user.username,
+        lop: null,
+        maNganh: null,
+        gpa: null,
+        trangThaiDangKy: 'CHUA_DANG_KY',
+        dangKyHienTai: null,
+        soDeTaiDangMoPhuHopNganh: 0,
       };
     }
-
-    return { role, message: 'Vai trò không được hỗ trợ' };
   }
 
   // =========================================================================
@@ -192,6 +380,7 @@ export class ReportService {
   async getThongKeDeTai(
     user: CurrentUserPayload,
     filter: { maNganh?: string; maGV?: string; trangThai?: string; page?: number; size?: number },
+    auth?: string,
   ) {
     const qb = this.dtRepo.createQueryBuilder('dt');
 
@@ -210,7 +399,52 @@ export class ReportService {
       qb.andWhere('dt.TrangThai = :st', { st: filter.trangThai });
     }
 
-    const allMatched = await qb.orderBy('dt.MaDeTai', 'DESC').getMany();
+    let allMatched = await qb.orderBy('dt.MaDeTai', 'DESC').getMany();
+
+    // Nếu bản sao đọc chưa có dữ liệu sự kiện, tổng hợp trực tiếp từ Topic + Registration
+    if (allMatched.length === 0 && (await this.dtRepo.count()) === 0) {
+      const deTaiUrl = this.config.get<string>('DETAI_URL', 'http://localhost:3002/de-tai');
+      const dangKyUrl = this.config.get<string>('DANGKY_URL', 'http://localhost:3003/dang-ky');
+      const topicQuery =
+        user.role === 'GV' && user.maDinhDanh
+          ? `${deTaiUrl}?maGV=${encodeURIComponent(user.maDinhDanh)}`
+          : deTaiUrl;
+      const [dtRes, dkRes] = await Promise.all([
+        this.fetchJson<any>(topicQuery, auth),
+        this.fetchJson<any>(`${dangKyUrl}?size=100`, auth),
+      ]);
+      const topics: any[] = Array.isArray(dtRes) ? dtRes : (dtRes?.data ?? []);
+      const regs: any[] = Array.isArray(dkRes) ? dkRes : (dkRes?.data ?? []);
+      const approvedByTopic = new Map<number, number>();
+      for (const dk of regs) {
+        if (dk.trangThai === 'DA_DUYET') {
+          approvedByTopic.set(Number(dk.maDeTai), (approvedByTopic.get(Number(dk.maDeTai)) || 0) + 1);
+        }
+      }
+      allMatched = topics
+        .filter((dt) => {
+          if (user.role === 'GV' && user.maDinhDanh && (dt.maGV || '').toUpperCase() !== user.maDinhDanh.toUpperCase()) {
+            return false;
+          }
+          if (filter.maGV && (dt.maGV || '').toUpperCase() !== filter.maGV.trim().toUpperCase()) {
+            return false;
+          }
+          if (filter.maNganh && dt.maNganh !== filter.maNganh) return false;
+          const st = dt.trangThai || 'DANG_MO';
+          if (filter.trangThai && st !== filter.trangThai) return false;
+          return true;
+        })
+        .map((dt) => ({
+          MaDeTai: dt.maDeTai,
+          TenDeTai: dt.tenDeTai,
+          MaGV: dt.maGV || null,
+          MaNganh: dt.maNganh || null,
+          ChiTieu: Number(dt.soLuongToiDa ?? dt.chiTieu ?? 1),
+          SoDaDuyet: approvedByTopic.get(Number(dt.maDeTai)) || 0,
+          TrangThai: dt.trangThai || 'DANG_MO',
+          NgayCapNhat: new Date(),
+        })) as DeTaiBanSao[];
+    }
 
     // Tính toán số liệu thống kê
     let tongChiTieu = 0;
@@ -298,6 +532,7 @@ export class ReportService {
   async getThongKeSinhVien(
     user: CurrentUserPayload,
     filter: { maNganh?: string; lop?: string; page?: number; size?: number },
+    auth?: string,
   ) {
     if (user.role !== 'QTV') {
       throw new ForbiddenException('Chỉ Quản trị viên mới có quyền xem thống kê sinh viên');
@@ -314,12 +549,48 @@ export class ReportService {
       qb.andWhere('sv.Lop = :lop', { lop: filter.lop });
     }
 
-    const allStudents = await qb.orderBy('sv.MaSV', 'ASC').getMany();
+    let allStudents = await qb.orderBy('sv.MaSV', 'ASC').getMany();
 
     // Lấy danh sách đăng ký còn hiệu lực (CHO_DUYET, DA_DUYET)
-    const activeRegistrations = await this.dkRepo.find({
+    let activeRegistrations = await this.dkRepo.find({
       where: { TrangThai: In(['CHO_DUYET', 'DA_DUYET']) },
     });
+
+    if (allStudents.length === 0 && (await this.svRepo.count()) === 0) {
+      const academicUrl = this.config.get<string>('ACADEMIC_URL', 'http://localhost:3001');
+      const dangKyUrl = this.config.get<string>('DANGKY_URL', 'http://localhost:3003/dang-ky');
+      const [svRes, dkRes] = await Promise.all([
+        this.fetchJson<any>(`${academicUrl}/sinh-vien?size=100`, auth),
+        this.fetchJson<any>(`${dangKyUrl}?size=100`, auth),
+      ]);
+      const svList: any[] = Array.isArray(svRes) ? svRes : (svRes?.data ?? []);
+      const dkList: any[] = Array.isArray(dkRes) ? dkRes : (dkRes?.data ?? []);
+      allStudents = svList
+        .filter((sv) => {
+          if (filter.maNganh && sv.maNganh !== filter.maNganh) return false;
+          if (filter.lop && sv.lop !== filter.lop) return false;
+          return true;
+        })
+        .map((sv) => ({
+          MaSV: sv.maSV || sv.MaSV,
+          HoTen: sv.hoTen,
+          Lop: sv.lop || null,
+          MaNganh: sv.maNganh || null,
+          GPA: sv.gpa ?? null,
+          TrangThai: sv.trangThai || 'HOAT_DONG',
+          NgayCapNhat: new Date(),
+        })) as SinhVienBanSao[];
+      activeRegistrations = dkList
+        .filter((dk) => dk.trangThai === 'CHO_DUYET' || dk.trangThai === 'DA_DUYET')
+        .map((dk) => ({
+          MaDangKy: dk.maDangKy,
+          MaSV: dk.maSV,
+          MaDeTai: dk.maDeTai,
+          TrangThai: dk.trangThai,
+          NgayDangKy: dk.ngayDangKy,
+          NgayCapNhat: new Date(),
+        })) as DangKyBanSao[];
+    }
     const dkMap = new Map<string, DangKyBanSao>();
     for (const dk of activeRegistrations) {
       dkMap.set(dk.MaSV, dk);
@@ -561,6 +832,7 @@ export class ReportService {
       namHoc?: string;
       maNganh?: string;
     },
+    auth?: string,
   ) {
     const maxRows = Number(this.config.get('EXPORT_MAX_ROWS') ?? 5000);
 
@@ -570,10 +842,14 @@ export class ReportService {
     switch (options.loai) {
       case 'de-tai': {
         title = 'Báo cáo Thống kê Đề tài Nghiên cứu Khoa học';
-        const res = await this.getThongKeDeTai(user, {
-          maNganh: options.maNganh,
-          size: maxRows,
-        });
+        const res = await this.getThongKeDeTai(
+          user,
+          {
+            maNganh: options.maNganh,
+            size: maxRows,
+          },
+          auth,
+        );
         rows = res.data;
         break;
       }
@@ -583,10 +859,14 @@ export class ReportService {
         if (user.role !== 'QTV') {
           throw new ForbiddenException('Chỉ Quản trị viên mới được xuất danh sách sinh viên');
         }
-        const res = await this.getThongKeSinhVien(user, {
-          maNganh: options.maNganh,
-          size: maxRows,
-        });
+        const res = await this.getThongKeSinhVien(
+          user,
+          {
+            maNganh: options.maNganh,
+            size: maxRows,
+          },
+          auth,
+        );
         rows = res.danhSachChuaDangKy;
         break;
       }
@@ -597,7 +877,7 @@ export class ReportService {
         if (user.role === 'GV') {
           rows = [res];
         } else {
-          rows = res.danhSach || [];
+          rows = ('danhSach' in res ? res.danhSach : []) || [];
         }
         break;
       }
@@ -608,7 +888,7 @@ export class ReportService {
         if (user.role === 'GV') {
           const myTopics = await this.dtRepo.find({
             where: { MaGV: user.maDinhDanh },
-            select: ['MaDeTai'],
+            select: { MaDeTai: true },
           });
           const ids = myTopics.map((t) => t.MaDeTai);
           if (ids.length === 0) {

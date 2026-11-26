@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class CreateDeTaiDto {
   @IsString()
@@ -8,6 +8,11 @@ export class CreateDeTaiDto {
   @IsOptional()
   @IsString()
   moTa?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  maGV?: string;
 
   @IsOptional()
   @IsString()

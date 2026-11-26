@@ -5,6 +5,7 @@ export default function ConfirmDialog({
   title = "Xác nhận xóa",
   message,
   confirmText = "Xóa",
+  confirmClassName = "btn-delete-solid",
   loading = false,
   onConfirm,
   onCancel,
@@ -24,7 +25,7 @@ export default function ConfirmDialog({
             Hủy
           </button>
           <button
-            className="btn-delete-solid"
+            className={confirmClassName}
             onClick={onConfirm}
             disabled={loading}
           >

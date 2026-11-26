@@ -85,28 +85,54 @@ function TongQuan() {
   const user = auth.getUser() || {};
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const loadData = useCallback(async () => {
+  const fetchOverview = useCallback(async (isCancelled = () => false) => {
     setLoading(true);
+    setError("");
     try {
       const res = await api.get("/bao-cao/tong-quan");
-      setData(res);
+      if (!isCancelled()) setData(res);
     } catch (err) {
-      toast.error(err.message || "Không thể tải số liệu tổng quan");
+      if (!isCancelled()) {
+        const msg = err.message || "Không thể tải số liệu tổng quan";
+        setError(msg);
+        toast.error(msg);
+      }
     } finally {
-      setLoading(false);
+      if (!isCancelled()) setLoading(false);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [toast]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let cancelled = false;
+    fetchOverview(() => cancelled);
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchOverview]);
+
+  const loadData = () => fetchOverview(() => false);
 
   if (loading && !data) {
     return (
       <div className="card" style={{ textAlign: "center", padding: "60px 20px" }}>
         <RefreshCw size={36} className="spin" style={{ color: "#2563eb", marginBottom: "16px" }} />
         <div style={{ color: "#64748b", fontSize: "15px" }}>Đang tải số liệu tổng quan hệ thống...</div>
+      </div>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <div className="card" style={{ textAlign: "center", padding: "48px 20px" }}>
+        <div style={{ color: "#475569", fontSize: "15px", marginBottom: "16px" }}>
+          Chưa thể tải dữ liệu tổng quan ({error}).
+        </div>
+        <button onClick={loadData}>
+          <RefreshCw size={15} />
+          Thử lại
+        </button>
       </div>
     );
   }
@@ -125,6 +151,7 @@ function TongQuan() {
           </div>
         </div>
         <button
+          className="btn-secondary"
           onClick={loadData}
           disabled={loading}
           style={{

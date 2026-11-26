@@ -24,14 +24,19 @@ const rules: Rule[] = [
   { pattern: /^\/tai-khoan(\/|$)/, roles: ['QTV'] },
   // Nhật ký: chỉ QTV
   { pattern: /^\/nhat-ky(\/|$)/, roles: ['QTV'] },
-  // Học vụ + đợt đề tài: mọi vai trò xem, QTV ghi
+  // Học vụ + đợt đề tài: mọi vai trò xem, tự cập nhật hồ sơ cá nhân, QTV ghi
   {
     methods: READ,
-    pattern: /^\/(sinh-vien|khoa|nganh|giang-vien|dot-de-tai)(\/|$)/,
+    pattern: /^\/(sinh-vien|khoa|nganh|giang-vien|lop|dot-de-tai)(\/|$)/,
     roles: ALL,
   },
   {
-    pattern: /^\/(sinh-vien|khoa|nganh|giang-vien|dot-de-tai)(\/|$)/,
+    methods: ['PATCH'],
+    pattern: /^\/(sinh-vien|giang-vien)\/[^/]+$/,
+    roles: ALL,
+  },
+  {
+    pattern: /^\/(sinh-vien|khoa|nganh|giang-vien|lop|dot-de-tai)(\/|$)/,
     roles: ['QTV'],
   },
   // Đề tài
@@ -92,6 +97,7 @@ async function bootstrap() {
     '/khoa': ACADEMIC,
     '/nganh': ACADEMIC,
     '/giang-vien': ACADEMIC,
+    '/lop': ACADEMIC,
     '/de-tai': TOPIC,
     '/dot-de-tai': TOPIC,
     '/hoi-dong': TOPIC,
@@ -143,13 +149,66 @@ async function bootstrap() {
     next();
   });
 
-  // 2. Nhật ký truy cập
+  // 2. Nhật ký truy cập + ghi nhật ký thao tác (POST/PUT/PATCH/DELETE) sang notification-service
+  const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+  const tenHanhDong = (method: string, path: string): string => {
+    if (path === '/auth/login') return 'DANG_NHAP';
+    if (path === '/auth/logout') return 'DANG_XUAT';
+    if (path === '/tai-khoan' && method === 'POST') return 'TAO_TAI_KHOAN';
+    if (path === '/tai-khoan/me/mat-khau') return 'DOI_MAT_KHAU';
+    if (path === '/tai-khoan/me') return 'CAP_NHAT_HO_SO';
+    if (/^\/tai-khoan\/\d+\/khoa$/.test(path)) return 'KHOA_TAI_KHOAN';
+    if (/^\/tai-khoan\/\d+\/mo-khoa$/.test(path)) return 'MO_KHOA_TAI_KHOAN';
+    if (/^\/tai-khoan\/\d+\/dat-lai-mat-khau$/.test(path)) return 'DAT_LAI_MAT_KHAU';
+    if (/^\/dang-ky\/\d+\/duyet$/.test(path)) return 'DUYET_DANG_KY';
+    if (/^\/dang-ky\/\d+\/tu-choi$/.test(path)) return 'TU_CHOI_DANG_KY';
+    if (/^\/dang-ky\/\d+\/huy$/.test(path)) return 'HUY_DANG_KY';
+    if (path === '/dang-ky' && method === 'POST') return 'DANG_KY_DE_TAI';
+    if (path.startsWith('/dang-ky/') && method === 'DELETE') return 'XOA_DANG_KY';
+    if (path === '/de-tai' && method === 'POST') return 'THEM_DE_TAI';
+    if (path.startsWith('/de-tai/') && (method === 'PUT' || method === 'PATCH')) return 'SUA_DE_TAI';
+    if (path.startsWith('/de-tai/') && method === 'DELETE') return 'XOA_DE_TAI';
+    if (path === '/sinh-vien/import') return 'IMPORT_SINH_VIEN';
+    if (path === '/sinh-vien' && method === 'POST') return 'THEM_SINH_VIEN';
+    if (path.startsWith('/sinh-vien/') && method === 'PATCH') return 'SUA_SINH_VIEN';
+    if (path.startsWith('/sinh-vien/') && method === 'DELETE') return 'XOA_SINH_VIEN';
+    if (path === '/giang-vien' && method === 'POST') return 'THEM_GIANG_VIEN';
+    if (path.startsWith('/giang-vien/') && method === 'PATCH') return 'SUA_GIANG_VIEN';
+    if (path.startsWith('/giang-vien/') && method === 'DELETE') return 'XOA_GIANG_VIEN';
+    if (path === '/khoa' && method === 'POST') return 'THEM_KHOA';
+    if (path.startsWith('/khoa/') && method === 'PATCH') return 'SUA_KHOA';
+    if (path.startsWith('/khoa/') && method === 'DELETE') return 'XOA_KHOA';
+    if (path === '/nganh' && method === 'POST') return 'THEM_NGANH';
+    if (path.startsWith('/nganh/') && method === 'PATCH') return 'SUA_NGANH';
+    if (path.startsWith('/nganh/') && method === 'DELETE') return 'XOA_NGANH';
+    const seg = path.split('/')[1]?.toUpperCase().replace(/-/g, '_') || 'HE_THONG';
+    const act = method === 'POST' ? 'THEM' : method === 'DELETE' ? 'XOA' : 'SUA';
+    return `${act}_${seg}`;
+  };
+
   server.use((req: Request, res: Response, next: NextFunction) => {
     const start = Date.now();
     res.on('finish', () => {
       console.log(
         `[gateway] ${res.getHeader('X-Correlation-Id')} ${req.method} ${req.originalUrl} -> ${res.statusCode} (${Date.now() - start}ms)`,
       );
+      const path = cleanPath(req.originalUrl);
+      if (WRITE_METHODS.has(req.method) && path !== '/auth/refresh') {
+        const user = (req as Request & { user?: { username?: string; role?: Role } }).user;
+        fetch(`${NOTI}/nhat-ky/noi-bo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nguoiThucHien: user?.username || (path === '/auth/login' ? 'NGUOI_DUNG' : 'ANONYMOUS'),
+            vaiTro: user?.role || null,
+            hanhDong: tenHanhDong(req.method, path),
+            doiTuong: path,
+            ketQua: res.statusCode < 400 ? 'THANH_CONG' : 'THAT_BAI',
+            diaChiIp: req.ip || null,
+          }),
+          signal: AbortSignal.timeout(1500),
+        }).catch(() => null);
+      }
     });
     next();
   });
@@ -201,7 +260,7 @@ async function bootstrap() {
     if (type !== 'Bearer' || !token) {
       return sendError(res, 401, 'Unauthorized', 'Thiếu token');
     }
-    let payload: { role?: Role };
+    let payload: { username?: string; role?: Role };
     try {
       payload = await jwt.verifyAsync(token, { secret });
     } catch {
@@ -212,6 +271,7 @@ async function bootstrap() {
         'Token không hợp lệ hoặc đã hết hạn',
       );
     }
+    (req as Request & { user?: { username?: string; role?: Role } }).user = payload;
 
     // Token cũ từ trước khi có phân quyền (vai trò "admin"...) không còn hợp lệ
     if (!payload.role || !ALL.includes(payload.role)) {

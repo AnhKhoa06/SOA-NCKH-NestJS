@@ -24,17 +24,6 @@ export class NganhService {
   ) {}
 
   async create(dto: CreateNganhDto): Promise<Nganh> {
-    const existing = await this.repo.findOne({
-      where: { maNganh: dto.maNganh },
-    });
-    if (existing) {
-      throw new ConflictException({
-        statusCode: 409,
-        code: 'TRUNG_MA',
-        message: `Mã ngành ${dto.maNganh} đã tồn tại`,
-      });
-    }
-
     const khoa = await this.khoaRepo.findOne({
       where: { maKhoa: dto.maKhoa, trangThai: 'HOAT_DONG' },
     });
@@ -44,6 +33,21 @@ export class NganhService {
         code: 'KHONG_TIM_THAY_KHOA',
         message: `Không tìm thấy khoa ${dto.maKhoa} đang hoạt động`,
       });
+    }
+
+    const existing = await this.repo.findOne({
+      where: { maNganh: dto.maNganh },
+    });
+    if (existing) {
+      if (existing.trangThai === 'HOAT_DONG') {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'TRUNG_MA',
+          message: `Mã ngành ${dto.maNganh} đã tồn tại`,
+        });
+      }
+      Object.assign(existing, dto, { trangThai: 'HOAT_DONG' });
+      return this.repo.save(existing);
     }
 
     return this.repo.save(this.repo.create(dto));

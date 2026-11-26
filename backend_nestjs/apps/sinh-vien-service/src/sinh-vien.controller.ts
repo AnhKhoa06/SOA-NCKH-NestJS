@@ -14,6 +14,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import 'multer';
 import { CurrentUser, Roles, RolesGuard } from '@app/common';
 import type { CurrentUserPayload } from '@app/common';
 import { SinhVienService } from './sinh-vien.service';
@@ -76,9 +77,28 @@ export class SinhVienController {
     return this.sinhVienService.findOne(maSV);
   }
 
-  @Roles('QTV')
+  @Roles('QTV', 'SV')
   @Patch(':maSV')
-  update(@Param('maSV') maSV: string, @Body() data: UpdateSinhVienDto) {
+  update(
+    @Param('maSV') maSV: string,
+    @Body() data: UpdateSinhVienDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    if (user.role === 'SV') {
+      if (user.maDinhDanh?.toUpperCase() !== maSV.trim().toUpperCase()) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: 'KHONG_DU_QUYEN',
+          message: 'Chỉ được cập nhật hồ sơ của chính mình',
+        });
+      }
+      // SV chỉ được tự sửa họ tên và email, không tự sửa GPA/trạng thái/ngành
+      const selfData: UpdateSinhVienDto = {
+        ...(data.hoTen !== undefined ? { hoTen: data.hoTen } : {}),
+        ...(data.email !== undefined ? { email: data.email } : {}),
+      };
+      return this.sinhVienService.update(maSV, selfData);
+    }
     return this.sinhVienService.update(maSV, data);
   }
 

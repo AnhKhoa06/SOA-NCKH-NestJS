@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
   Post,
   Query,
@@ -24,8 +25,11 @@ export class ReportController {
   // 1. TỔNG QUAN (FR-16) - Mọi vai trò đã đăng nhập
   @Get('tong-quan')
   @Roles('QTV', 'GV', 'SV')
-  getTongQuan(@CurrentUser() user: CurrentUserPayload) {
-    return this.reportService.getTongQuan(user);
+  getTongQuan(
+    @CurrentUser() user: CurrentUserPayload,
+    @Headers('authorization') auth?: string,
+  ) {
+    return this.reportService.getTongQuan(user, auth);
   }
 
   // 2. THỐNG KÊ ĐỀ TÀI (FR-17) - QTV và GV
@@ -38,14 +42,19 @@ export class ReportController {
     @Query('trangThai') trangThai?: string,
     @Query('page') page?: string,
     @Query('size') size?: string,
+    @Headers('authorization') auth?: string,
   ) {
-    return this.reportService.getThongKeDeTai(user, {
-      maNganh,
-      maGV,
-      trangThai,
-      page: page ? Number(page) : undefined,
-      size: size ? Number(size) : undefined,
-    });
+    return this.reportService.getThongKeDeTai(
+      user,
+      {
+        maNganh,
+        maGV,
+        trangThai,
+        page: page ? Number(page) : undefined,
+        size: size ? Number(size) : undefined,
+      },
+      auth,
+    );
   }
 
   // 3. THỐNG KÊ SINH VIÊN (FR-18) - Chỉ QTV
@@ -57,13 +66,18 @@ export class ReportController {
     @Query('lop') lop?: string,
     @Query('page') page?: string,
     @Query('size') size?: string,
+    @Headers('authorization') auth?: string,
   ) {
-    return this.reportService.getThongKeSinhVien(user, {
-      maNganh,
-      lop,
-      page: page ? Number(page) : undefined,
-      size: size ? Number(size) : undefined,
-    });
+    return this.reportService.getThongKeSinhVien(
+      user,
+      {
+        maNganh,
+        lop,
+        page: page ? Number(page) : undefined,
+        size: size ? Number(size) : undefined,
+      },
+      auth,
+    );
   }
 
   // 4. QUY ĐỔI GIỜ NCKH (FR-31) - QTV và GV
@@ -87,13 +101,18 @@ export class ReportController {
     @Query('namHoc') namHoc?: string,
     @Query('maNganh') maNganh?: string,
     @Res() res?: Response,
+    @Headers('authorization') auth?: string,
   ) {
-    const result = await this.reportService.exportReport(user, {
-      loai: loai || 'de-tai',
-      dinhDang,
-      namHoc,
-      maNganh,
-    });
+    const result = await this.reportService.exportReport(
+      user,
+      {
+        loai: loai || 'de-tai',
+        dinhDang,
+        namHoc,
+        maNganh,
+      },
+      auth,
+    );
 
     if (dinhDang === 'csv' && (result as any).content && res) {
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');

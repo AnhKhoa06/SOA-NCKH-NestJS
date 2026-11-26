@@ -11,6 +11,9 @@ export class SinhVien {
   @Column({ name: 'Email', type: 'varchar', length: 255, nullable: true })
   email: string;
 
+  @Column({ name: 'KhoaHoc', type: 'varchar', length: 20, nullable: true })
+  khoaHoc: string;
+
   @Column({ name: 'Lop', type: 'varchar', length: 50, nullable: true })
   lop: string;
 

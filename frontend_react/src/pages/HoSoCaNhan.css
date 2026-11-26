@@ -137,6 +137,23 @@
   color: #64748b;
 }
 
+.hs-edit-form {
+  padding: 24px 28px 8px;
+}
+
+.hs-edit-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.content .hs-cancel-btn {
+  background-color: #ffffff !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
 @media (max-width: 640px) {
   .hs-grid {
     grid-template-columns: 1fr;

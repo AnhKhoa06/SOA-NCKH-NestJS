@@ -10,6 +10,7 @@ import { QueryFailedError, Repository } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import * as ExcelJS from 'exceljs';
+import 'multer';
 import type { CurrentUserPayload } from '@app/common';
 import { SinhVien } from './sinh-vien.entity';
 import { Nganh } from './nganh.entity';
@@ -36,7 +37,7 @@ export class SinhVienService {
 
   // CREATE - Thêm sinh viên mới
   async create(data: CreateSinhVienDto): Promise<SinhVien> {
-    const maSV = data.maSV?.trim() || data.MaSV?.trim();
+    const maSV = (data.maSV?.trim() || data.MaSV?.trim() || '').toUpperCase();
     if (!maSV) {
       throw new BadRequestException('Mã sinh viên không được để trống');
     }
@@ -44,15 +45,40 @@ export class SinhVienService {
     const existingStudent = await this.sinhVienRepository.findOne({
       where: { maSV },
     });
-    if (existingStudent) {
-      throw new ConflictException('Mã sinh viên đã tồn tại');
+    if (existingStudent && existingStudent.trangThai === 'HOAT_DONG') {
+      throw new ConflictException({
+        statusCode: 409,
+        code: 'TRUNG_MA',
+        message: `Mã sinh viên ${maSV} đã tồn tại`,
+      });
+    }
+    if (data.email?.trim()) {
+      const emailTrung = await this.sinhVienRepository.findOne({
+        where: { email: data.email.trim(), trangThai: 'HOAT_DONG' },
+      });
+      if (emailTrung && emailTrung.maSV !== maSV) {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'TRUNG_EMAIL',
+          message: `Email ${data.email.trim()} đã được sử dụng`,
+        });
+      }
     }
     await this.kiemTraNganh(data.maNganh);
     const studentData = { ...data };
     delete studentData.maSV;
     delete studentData.MaSV;
+    if (existingStudent) {
+      Object.assign(existingStudent, studentData, {
+        email: data.email?.trim() || undefined,
+        maSV,
+        trangThai: 'HOAT_DONG',
+      });
+      return await this.sinhVienRepository.save(existingStudent);
+    }
     const sinhVien = this.sinhVienRepository.create({
       ...studentData,
+      email: data.email?.trim() || undefined,
       maSV,
     });
     return await this.sinhVienRepository.save(sinhVien);
@@ -61,7 +87,7 @@ export class SinhVienService {
   async importFromExcel(file: Express.Multer.File) {
     const workbook = new ExcelJS.Workbook();
     try {
-      await workbook.xlsx.load(file.buffer);
+      await workbook.xlsx.load(file.buffer as any);
     } catch {
       throw new BadRequestException('File không đúng định dạng Excel (.xlsx)');
     }

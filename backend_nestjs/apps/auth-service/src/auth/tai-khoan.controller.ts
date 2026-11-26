@@ -45,6 +45,16 @@ export class TaiKhoanController {
     return this.svc.toi(Number(sub));
   }
 
+  // Mọi vai trò đều cập nhật được email tài khoản của chính mình
+  @Roles('QTV', 'GV', 'SV')
+  @Patch('me')
+  capNhatToi(
+    @CurrentUser('sub') sub: string,
+    @Body() body: { email?: string },
+  ) {
+    return this.svc.capNhatEmail(Number(sub), body?.email);
+  }
+
   // Mọi vai trò đều đổi được mật khẩu của chính mình
   @Roles('QTV', 'GV', 'SV')
   @HttpCode(200)

@@ -6,6 +6,7 @@ import { SinhVienModule } from './sinh-vien.module';
 import { NganhModule } from './nganh.module';
 import { GiangVienModule } from './giang-vien.module';
 import { KhoaModule } from './khoa.module';
+import { LopModule } from './lop.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { KhoaModule } from './khoa.module';
     NganhModule,
     GiangVienModule,
     KhoaModule,
+    LopModule,
     CommonModule,
   ],
 })

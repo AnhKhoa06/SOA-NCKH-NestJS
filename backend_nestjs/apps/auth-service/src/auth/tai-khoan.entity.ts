@@ -17,6 +17,9 @@ export class TaiKhoan {
   @Column({ name: 'MaDinhDanh', type: 'varchar', length: 20, nullable: true })
   maDinhDanh: string | null;
 
+  @Column({ name: 'Email', type: 'varchar', length: 255, nullable: true, unique: true })
+  email: string | null;
+
   @Column({
     name: 'TrangThai',
     type: 'enum',
@@ -24,6 +27,9 @@ export class TaiKhoan {
     default: 'HOAT_DONG',
   })
   trangThai: string;
+
+  @Column({ name: 'BatBuocDoiMatKhau', type: 'boolean', default: false })
+  batBuocDoiMatKhau: boolean;
 
   @Column({ name: 'SoLanSai', default: 0 })
   soLanSai: number;

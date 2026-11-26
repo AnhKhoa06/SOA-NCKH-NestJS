@@ -176,7 +176,10 @@ function App() {
                             key={r.path}
                             path={r.path}
                             element={
-                              r.roles.includes(role) ? (
+                              user?.batBuocDoiMatKhau &&
+                              r.path !== "/doi-mat-khau" ? (
+                                <Navigate to="/doi-mat-khau" replace />
+                              ) : r.roles.includes(role) ? (
                                 r.element
                               ) : (
                                 <Navigate to={HOME} replace />
@@ -186,7 +189,16 @@ function App() {
                         ))}
                         <Route
                           path="*"
-                          element={<Navigate to={HOME} replace />}
+                          element={
+                            <Navigate
+                              to={
+                                user?.batBuocDoiMatKhau
+                                  ? "/doi-mat-khau"
+                                  : HOME
+                              }
+                              replace
+                            />
+                          }
                         />
                       </Routes>
                     </main>

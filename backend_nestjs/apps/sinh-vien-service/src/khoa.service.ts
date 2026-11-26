@@ -24,11 +24,16 @@ export class KhoaService {
   async create(dto: CreateKhoaDto): Promise<Khoa> {
     const existing = await this.repo.findOne({ where: { maKhoa: dto.maKhoa } });
     if (existing) {
-      throw new ConflictException({
-        statusCode: 409,
-        code: 'TRUNG_MA',
-        message: `Mã khoa ${dto.maKhoa} đã tồn tại`,
-      });
+      if (existing.trangThai === 'HOAT_DONG') {
+        throw new ConflictException({
+          statusCode: 409,
+          code: 'TRUNG_MA',
+          message: `Mã khoa ${dto.maKhoa} đã tồn tại`,
+        });
+      }
+      // Nếu khoa đã bị xóa mềm (NGUNG_HOAT_DONG), khôi phục và cập nhật lại thông tin mới
+      Object.assign(existing, dto, { trangThai: 'HOAT_DONG' });
+      return this.repo.save(existing);
     }
     return this.repo.save(this.repo.create(dto));
   }
